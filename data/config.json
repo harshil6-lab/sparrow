@@ -1,0 +1,9 @@
+{
+  "_note": "Every null must be filled from a cited source before it is shown in the UI.",
+  "grid_emission_factor_kg_per_kwh": null,
+  "grid_emission_factor_source": "TODO: latest CEA CO2 baseline database, with year",
+  "tariff_slabs": null,
+  "tariff_source": "TODO: Gujarat DISCOM tariff order, with year",
+  "solar_subsidy_terms": null,
+  "solar_subsidy_source": "TODO: official PM Surya Ghar portal, check current terms"
+}
