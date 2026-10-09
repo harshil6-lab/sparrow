@@ -50,6 +50,8 @@ describe("Home, verified bills", () => {
   it("shows the user's own verified result without a SAMPLE badge", () => {
     renderHome({ state: "thriving", bills: [bill(170, "2025-06"), bill(200, "2025-05")] });
     expect(screen.getByText("You saved 30 kWh, verified.")).toBeInTheDocument();
+    expect(screen.getByText("30 kWh saved")).toBeInTheDocument();
+    expect(screen.getByText("Verified and thriving")).toBeInTheDocument();
     expect(screen.queryByText("SAMPLE")).toBeNull();
   });
 });

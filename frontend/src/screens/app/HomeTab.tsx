@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Icon } from "../../components/Icon";
-import { SparrowMascot } from "../../components/SparrowMascot";
+import { SparrowMascot, type SparrowPose } from "../../components/SparrowMascot";
 import { NeighbourhoodScene } from "../../components/scenes/NeighbourhoodScene";
 import { Sample } from "../../components/ui/Sample";
 import type { Bill } from "../../lib/api/data";
@@ -14,6 +14,14 @@ const CARD1_KEY: Record<WorldState, string> = {
   hazy: "home.card1Hazy",
   fresh: "home.card1Fresh",
   thriving: "home.card1Thriving",
+};
+
+/** The hero sparrow pose also follows the world state. */
+const POSE: Record<WorldState, SparrowPose> = {
+  dawn: "curious",
+  hazy: "ruffled",
+  fresh: "hop",
+  thriving: "celebrate",
 };
 
 /**
@@ -51,7 +59,7 @@ export function HomeTab({
     <div className="page home-page">
       <NeighbourhoodScene
         state={state}
-        pose={missionDone ? "hop" : "curious"}
+        pose={POSE[state]}
         line={missionDone ? t("home.sceneDone") : t("home.sceneIdle")}
       />
       <section className="home-answer">
@@ -102,16 +110,16 @@ export function HomeTab({
         <button className="home-card" onClick={missionDone ? onOpenMission : onBill}>
           <span>{t("home.card3Label")}</span>
           <strong>
-            {demo
-              ? t("home.card3Demo", { kwh: savedKwh })
+            {verified
+              ? t("home.card3Saved", { kwh: savedKwh })
               : missionDone
                 ? t("home.card3Done")
                 : t("home.card3None")}
           </strong>
           <small>
-            {demo ? (
+            {verified ? (
               <>
-                <Sample /> {t("common.sourcePending")}
+                {demo ? <Sample /> : null} {t("common.sourcePending")}
               </>
             ) : missionDone ? (
               t("home.card3DoneHint")

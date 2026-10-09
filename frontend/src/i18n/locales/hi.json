@@ -136,7 +136,7 @@
     "startSweep": "जाँच शुरू करें",
     "openCompleted": "पूरा हुआ मिशन खोलें",
     "card3Label": "क्या बदला?",
-    "card3Demo": "{{kwh}} kWh की बचत",
+    "card3Saved": "{{kwh}} kWh की बचत",
     "card3Done": "3 शांत रिसाव मिले",
     "card3None": "अभी कुछ मापा नहीं गया",
     "card3Hint": "आपकी बचत शून्य से शुरू होती है",

@@ -136,7 +136,7 @@
     "startSweep": "Start the sweep",
     "openCompleted": "Open completed mission",
     "card3Label": "WHAT CHANGED?",
-    "card3Demo": "{{kwh}} kWh saved",
+    "card3Saved": "{{kwh}} kWh saved",
     "card3Done": "3 quiet drains found",
     "card3None": "Nothing measured yet",
     "card3Hint": "Your savings start at zero",
