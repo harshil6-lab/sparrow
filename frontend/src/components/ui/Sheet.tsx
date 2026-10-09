@@ -1,4 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { useSheetPortalTarget } from "./sheetPortal";
 import { Icon } from "../Icon";
 
 interface SheetProps {
@@ -23,6 +25,7 @@ const FOCUSABLE =
  */
 export function Sheet({ open, onClose, label, sheetClassName = "sheet", closeLabel, children }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const portalTarget = useSheetPortalTarget();
   const restoreRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -62,7 +65,7 @@ export function Sheet({ open, onClose, label, sheetClassName = "sheet", closeLab
     }
   };
 
-  return (
+  const content = (
     <div
       className="overlay"
       role="presentation"
@@ -88,5 +91,9 @@ export function Sheet({ open, onClose, label, sheetClassName = "sheet", closeLab
       </div>
     </div>
   );
+
+  // Inside the app frame (>=900px) the sheet is portaled into the frame element
+  // so it is positioned relative to the frame, never the viewport.
+  return portalTarget ? createPortal(content, portalTarget) : content;
 }
 

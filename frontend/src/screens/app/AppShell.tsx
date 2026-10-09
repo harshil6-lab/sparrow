@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Icon, type IconName } from "../../components/Icon";
 import { SparrowLogo } from "../../components/SparrowLogo";
 import { SparrowMascot } from "../../components/SparrowMascot";
 import { ProfileSheet } from "./ProfileSheet";
+import { SheetPortalContext } from "../../components/ui/sheetPortal";
 import { useAuth } from "../../lib/AuthProvider";
 
 type TabId = "home" | "missions" | "learn" | "solar" | "me";
@@ -29,6 +30,11 @@ export function AppShell() {
   const { profile } = useAuth();
   const [tab, setTab] = useState<TabId>("home");
   const [profileOpen, setProfileOpen] = useState(false);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [frameEl, setFrameEl] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    setFrameEl(frameRef.current);
+  }, []);
   const items = navItems(t);
 
   const initials = (profile?.user.displayName ?? "S")
@@ -47,7 +53,7 @@ export function AppShell() {
   };
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-app-frame ref={frameRef}>
       <aside className="side-nav">
         <SparrowLogo />
         <nav>
@@ -69,8 +75,8 @@ export function AppShell() {
         </button>
       </aside>
 
-      <main className="app-main">
-        <header>
+      <main className="app-main" data-app-scroll>
+        <header data-app-header>
           <div className="mobile-logo">
             <SparrowLogo />
           </div>
@@ -99,7 +105,7 @@ export function AppShell() {
         </div>
       </main>
 
-      <nav className="bottom-nav" aria-label={t("app.nestName")}>
+      <nav className="bottom-nav" data-app-tabbar aria-label={t("app.nestName")}>
         {items.map((item) => (
           <button
             key={item.id}
@@ -114,7 +120,9 @@ export function AppShell() {
         ))}
       </nav>
 
-      <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <SheetPortalContext.Provider value={frameEl}>
+        <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} />
+      </SheetPortalContext.Provider>
     </div>
   );
 }

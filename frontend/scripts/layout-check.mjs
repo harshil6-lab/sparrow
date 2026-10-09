@@ -17,7 +17,7 @@ import { dirname, resolve } from "node:path";
 const BASE = process.env.BASE_URL || "http://localhost:5173";
 const here = dirname(fileURLToPath(import.meta.url));
 const QA = resolve(here, "../.qa");
-const MODE = process.argv[2] === "baseline" ? "baseline" : "verify";
+const MODE = ["baseline", "mobile"].includes(process.argv[2]) ? process.argv[2] : "verify";
 
 const WIDTHS = [390, 768, 1024, 1440, 1920];
 const ROUTES = [
@@ -77,8 +77,15 @@ async function gotoRoute(page, route) {
     await page.getByRole("button", { name: "Open profile" }).click();
     await page.waitForSelector('[role="dialog"]', { timeout: 8000 });
   }
+  // Readiness gates: stylesheets applied (guards against a transient
+  // CSS-less render while the dev server re-optimizes) and fonts settled.
+  await page.waitForFunction(
+    () => getComputedStyle(document.documentElement).getPropertyValue("--forest").trim() !== "",
+    null,
+    { timeout: 15000 },
+  );
   await page.evaluate(() => document.fonts?.ready);
-  await page.waitForTimeout(150);
+  await page.waitForTimeout(200);
 }
 
 const within = (child, parent, tol = 1) =>
@@ -148,6 +155,15 @@ async function main() {
     if (MODE === "baseline") {
       const manifest = await capture(browser, resolve(QA, "baseline"));
       console.log(`Baseline captured: ${Object.keys(manifest).length} screenshots in .qa/baseline`);
+      return;
+    }
+
+    if (MODE === "mobile") {
+      const before = JSON.parse(readFileSync(resolve(QA, "baseline", "manifest.json"), "utf8"));
+      const after = await capture(browser, resolve(QA, "after-mobile"));
+      const diffs = Object.keys(before).filter((k) => before[k] !== after[k]);
+      console.log(diffs.length === 0 ? "ZERO differences at 390px" : `DIFFERS: ${diffs.join(", ")}`);
+      if (diffs.length) process.exitCode = 1;
       return;
     }
 
