@@ -1,0 +1,14 @@
+{
+  "languages": [
+    {"code": "en", "name": "English",   "native": "English",   "reviewed": true},
+    {"code": "hi", "name": "Hindi",     "native": "हिन्दी",      "reviewed": false},
+    {"code": "gu", "name": "Gujarati",  "native": "ગુજરાતી",     "reviewed": false},
+    {"code": "mr", "name": "Marathi",   "native": "मराठी",       "reviewed": false},
+    {"code": "bn", "name": "Bengali",   "native": "বাংলা",       "reviewed": false},
+    {"code": "ta", "name": "Tamil",     "native": "தமிழ்",       "reviewed": false},
+    {"code": "te", "name": "Telugu",    "native": "తెలుగు",      "reviewed": false},
+    {"code": "kn", "name": "Kannada",   "native": "ಕನ್ನಡ",       "reviewed": false},
+    {"code": "ml", "name": "Malayalam", "native": "മലയാളം",     "reviewed": false},
+    {"code": "pa", "name": "Punjabi",   "native": "ਪੰਜਾਬੀ",      "reviewed": false}
+  ]
+}

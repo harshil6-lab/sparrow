@@ -1,0 +1,11 @@
+{
+  "app.title": "Chiri, your home's environment teacher",
+  "welcome": "Hi! I am Chiri. Let's find out how your home is doing.",
+  "pin.prompt": "Drop a pin on your house",
+  "bill.prompt": "Enter the units from your electricity bill",
+  "score.title": "Your home today",
+  "mission.title": "This week's mission",
+  "impact.title": "Your impact",
+  "label.sample": "SAMPLE DATA",
+  "label.source": "Source"
+}

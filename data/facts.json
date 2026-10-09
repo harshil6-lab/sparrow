@@ -1,0 +1,32 @@
+{
+  "_schema": "Each card: right and wrong action, per-month effect as a formula or cited number, source required.",
+  "cards": [
+    {
+      "id": "ac_setpoint",
+      "category": "energy",
+      "wrong": {"en": "Running the AC at the lowest setting"},
+      "right": {"en": "Set the AC to 24-26 C and use the fan"},
+      "effect": {"kind": "percent_of_ac_units", "value": null},
+      "source": "TODO: cite BEE or equivalent guidance",
+      "verified": false
+    },
+    {
+      "id": "led_swap",
+      "category": "energy",
+      "wrong": {"en": "Using old incandescent or CFL bulbs"},
+      "right": {"en": "Switch to LED bulbs"},
+      "effect": {"kind": "watts_saved_per_bulb", "value": null},
+      "source": "TODO",
+      "verified": false
+    },
+    {
+      "id": "standby_power",
+      "category": "energy",
+      "wrong": {"en": "Leaving devices on standby overnight"},
+      "right": {"en": "Switch off at the plug"},
+      "effect": {"kind": "watts_standby", "value": null},
+      "source": "TODO",
+      "verified": false
+    }
+  ]
+}
