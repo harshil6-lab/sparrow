@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:contrast": "node scripts/contrast.mjs"
+    "test:contrast": "node scripts/contrast.mjs",
+    "test:layout": "node scripts/layout-check.mjs"
   },
   "dependencies": {
     "@fontsource/baloo-2": "^5.1.0",
@@ -45,6 +46,7 @@
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
     "jsdom": "^25.0.1",
+    "playwright-core": "^1.64.0",
     "tailwindcss": "^4.0.0",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.18.2",
