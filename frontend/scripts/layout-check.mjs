@@ -103,6 +103,10 @@ async function measure(page) {
     };
     const frame = document.querySelector("[data-app-frame]");
     const scroll = document.querySelector("[data-app-scroll]");
+    // At <900px the window scrolls (app-main has no overflow); at >=900px the
+    // frame's app-main scrolls. Scroll both so the "last content vs tab bar"
+    // assertion measures the real end-of-scroll position at every width.
+    window.scrollTo(0, document.documentElement.scrollHeight);
     if (scroll) scroll.scrollTop = scroll.scrollHeight;
     const last = scroll ? scroll.lastElementChild : null;
     return {
