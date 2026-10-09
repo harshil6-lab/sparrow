@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 60" width="1200" height="60" role="img" aria-label="Leaf divider">
+  <path d="M0 30 Q150 8 300 30 T600 30 T900 30 T1200 30" stroke="#5FAE6B" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="6 8">
+    <animate attributeName="stroke-dashoffset" values="0;-28" dur="2s" repeatCount="indefinite"/>
+  </path>
+  <g transform="translate(600 30)">
+    <path d="M-34 0 Q-22 -20 -6 -4 Q-20 8 -34 0Z" fill="#3FA56B"/>
+    <path d="M34 0 Q22 -20 6 -4 Q20 8 34 0Z" fill="#3FA56B"/>
+    <circle cx="0" cy="0" r="9" fill="#FFD166"/>
+    <path d="M-3 -1 L-0.5 2 L4 -4" stroke="#7A5230" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <circle cx="300" cy="30" r="4" fill="#7EC8E3"/>
+  <circle cx="900" cy="30" r="4" fill="#7EC8E3"/>
+</svg>
