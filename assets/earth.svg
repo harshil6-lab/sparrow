@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 220" width="1200" height="220" role="img" aria-label="Impact banner">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0E3B2E"/><stop offset="1" stop-color="#1F6B4A"/>
+    </linearGradient>
+    <radialGradient id="g" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#5CC6F0"/><stop offset="1" stop-color="#1B6CA8"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="220" fill="url(#bg)"/>
+  <!-- stars/sparkles -->
+  <g fill="#CFF5DD">
+    <circle cx="80" cy="40" r="2"><animate attributeName="opacity" values="1;0.2;1" dur="3s" repeatCount="indefinite"/></circle>
+    <circle cx="240" cy="170" r="1.6"><animate attributeName="opacity" values="0.3;1;0.3" dur="2.6s" repeatCount="indefinite"/></circle>
+    <circle cx="520" cy="30" r="2"><animate attributeName="opacity" values="1;0.2;1" dur="3.4s" repeatCount="indefinite"/></circle>
+    <circle cx="700" cy="190" r="1.8"><animate attributeName="opacity" values="0.2;1;0.2" dur="2.8s" repeatCount="indefinite"/></circle>
+    <circle cx="1120" cy="40" r="2"><animate attributeName="opacity" values="1;0.3;1" dur="3.2s" repeatCount="indefinite"/></circle>
+  </g>
+  <!-- earth -->
+  <g transform="translate(1000 110)">
+    <circle r="80" fill="url(#g)"/>
+    <g fill="#4FB26B">
+      <path d="M-50 -30 Q-30 -55 -5 -42 Q10 -30 -8 -15 Q-25 -8 -38 -5 Q-58 -12 -50 -30Z"/>
+      <path d="M15 5 Q40 -5 55 15 Q50 40 28 48 Q10 35 15 5Z"/>
+      <path d="M-30 25 Q-15 20 -8 35 Q-18 55 -32 45Z"/>
+      <animateTransform attributeName="transform" type="translate" values="0 0;-12 0;0 0" dur="8s" repeatCount="indefinite"/>
+    </g>
+    <circle r="80" fill="none" stroke="#9FE3B8" stroke-opacity="0.5" stroke-width="2"/>
+  </g>
+  <!-- leaf motif -->
+  <g transform="translate(120 110)">
+    <path d="M0 60 Q-70 20 0 -60 Q70 20 0 60Z" fill="#6CC07A"/>
+    <path d="M0 60 V-50" stroke="#2F7A4A" stroke-width="3"/>
+    <path d="M0 20 L-24 0 M0 0 L24 -20 M0 -20 L-16 -34" stroke="#2F7A4A" stroke-width="2.5" stroke-linecap="round"/>
+    <animateTransform attributeName="transform" type="translate" values="120 110;120 104;120 110" dur="4s" repeatCount="indefinite"/>
+  </g>
+  <g font-family="'Noto Sans','Segoe UI',Arial,sans-serif" text-anchor="middle">
+    <text x="560" y="98" font-size="40" font-weight="800" fill="#E9FFF1">kWh saved · CO₂ avoided · ₹ saved</text>
+    <text x="560" y="140" font-size="20" fill="#B7E8C9">Measured bill to bill. Projections are always labelled.</text>
+  </g>
+</svg>

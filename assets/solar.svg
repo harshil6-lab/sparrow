@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 220" width="1200" height="220" role="img" aria-label="Rooftop solar banner">
+  <defs>
+    <linearGradient id="s" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFC857"/>
+      <stop offset="1" stop-color="#FFF0C4"/>
+    </linearGradient>
+    <linearGradient id="p" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2E5B9A"/><stop offset="1" stop-color="#16346B"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="220" fill="url(#s)"/>
+  <g transform="translate(160 100)">
+    <circle r="46" fill="#FF9F1C"/>
+    <g stroke="#FF9F1C" stroke-width="5" stroke-linecap="round">
+      <path d="M0 -66 V-88 M0 66 V88 M-66 0 H-88 M66 0 H88 M47 -47 L62 -62 M-47 47 L-62 62 M47 47 L62 62 M-47 -47 L-62 -62"/>
+      <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="30s" repeatCount="indefinite"/>
+    </g>
+  </g>
+  <g transform="translate(560 40)">
+    <g transform="skewX(-12)">
+      <rect x="0" y="0" width="110" height="70" fill="url(#p)" stroke="#E7EEF7" stroke-width="3"/>
+      <path d="M37 0 V70 M73 0 V70 M0 23 H110 M0 47 H110" stroke="#9DB7DA" stroke-width="1.5"/>
+      <rect x="125" y="0" width="110" height="70" fill="url(#p)" stroke="#E7EEF7" stroke-width="3"/>
+      <path d="M162 0 V70 M198 0 V70 M125 23 H235 M125 47 H235" stroke="#9DB7DA" stroke-width="1.5"/>
+      <rect x="250" y="0" width="110" height="70" fill="url(#p)" stroke="#E7EEF7" stroke-width="3"/>
+      <path d="M287 0 V70 M323 0 V70 M250 23 H360 M250 47 H360" stroke="#9DB7DA" stroke-width="1.5"/>
+      <rect x="0" y="85" width="110" height="70" fill="url(#p)" stroke="#E7EEF7" stroke-width="3"/>
+      <path d="M37 85 V155 M73 85 V155 M0 108 H110 M0 132 H110" stroke="#9DB7DA" stroke-width="1.5"/>
+      <rect x="125" y="85" width="110" height="70" fill="url(#p)" stroke="#E7EEF7" stroke-width="3"/>
+      <path d="M162 85 V155 M198 85 V155 M125 108 H235 M125 132 H235" stroke="#9DB7DA" stroke-width="1.5"/>
+      <rect x="250" y="85" width="110" height="70" fill="url(#p)" stroke="#E7EEF7" stroke-width="3"/>
+      <path d="M287 85 V155 M323 85 V155 M250 108 H360 M250 132 H360" stroke="#9DB7DA" stroke-width="1.5"/>
+    </g>
+    <!-- glint -->
+    <rect x="-40" y="0" width="30" height="160" fill="#FFFFFF" opacity="0.35" transform="skewX(-20)">
+      <animate attributeName="x" values="-40;420;-40" dur="5s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+  <g font-family="'Noto Sans','Segoe UI',Arial,sans-serif">
+    <text x="1130" y="95" text-anchor="end" font-size="38" font-weight="800" fill="#7A4B00">Your roof, your sunlight</text>
+    <text x="1130" y="132" text-anchor="end" font-size="20" font-weight="500" fill="#7A4B00">Draw it. Estimate it. Apply for it.</text>
+  </g>
+</svg>
