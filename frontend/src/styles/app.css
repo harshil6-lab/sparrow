@@ -1,0 +1,89 @@
+/*
+ * Additive styles for the frontend-foundation primitives.
+ * Nothing here restyles the vendored design — it only adds the new building
+ * blocks the brief asks for (pill buttons, beta tag, sheets, app-column, etc.)
+ * and enforces the accessibility floors (14px captions, 48px touch targets).
+ */
+
+/* Pill button ("Enter Sparrow", "Skip"). Keeps the one-radius system via --radius-pill. */
+.ui-pill,
+.skip.ui-pill {
+  border: 0;
+  border-radius: var(--radius-pill);
+  min-height: 48px;
+  padding: 0 26px;
+  font-weight: 700;
+}
+
+/* Skip pill: visible from second 0, bottom-right on small screens. */
+.story-player > .skip { border-radius: var(--radius-pill); }
+
+/* Beta tag on unreviewed languages. */
+.beta-tag {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+/* Section headings that were previously 8-10px, raised to the 14px caption floor. */
+.app-main > header span,
+.home-answer > div > span,
+.proof span,
+.standby-mission > div > span,
+.next-missions span,
+.profile span,
+.impact > div > span,
+.solar-estimate > div > span,
+.sheet-head span,
+.habit-top,
+.habit-grid dt,
+.setup-facts span,
+.scene-state,
+.splash > p,
+.how span {
+  font-size: 14px;
+}
+
+/* 48px minimum touch target on the compact controls. */
+.avatar { width: 48px; height: 48px; }
+/* Design used --earth here, but white initials on --earth are only 3.33:1.
+   --forest keeps the same palette and clears AA (6.48:1). */
+.avatar,
+.avatar.large {
+  background: var(--forest);
+}
+.language-list button { min-height: 54px; }
+.city-groups button { min-height: 48px; }
+.city-suggestions button { min-height: 48px; }
+
+/* Centred app column: 360px phones up to a comfortably centred laptop column. */
+.app-shell,
+.landing,
+.splash,
+.story-player,
+.setup-screen,
+.ready-screen,
+.auth-screen {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1200px;
+}
+
+/* The bottom tab bar is fixed; never let page content hide behind it. */
+@media (max-width: 900px) {
+  .app-shell { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .page { padding-bottom: 40px; }
+}
+
+/* New small sheets use the bottom-sheet chrome. */
+.removed-screen,
+.bill-sheet,
+.sweep-sheet,
+.detail-sheet,
+.nest-sheet,
+.reminder-sheet,
+.confirm-sheet {
+  border-radius: var(--radius);
+}
+
