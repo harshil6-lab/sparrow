@@ -1,15 +1,22 @@
 <div align="center">
 
-<img src="assets/banner1.svg" alt="Sparrow - The Indian Energy Saver" width="100%"/>
+<img src="assets/banner0.svg" alt="Sparrow - The Indian Energy Saver" width="100%"/>
 
-# 🐦 Sparrow — The Indian Energy Saver
-
-**See what your home really uses. Save it. Prove it.**
+<a href="#">
+  <img src="https://readme-typing-svg.demolab.com?font=Noto+Sans&weight=700&size=24&duration=3200&pause=900&color=2F7A4A&center=true&vCenter=true&width=760&lines=See+what+your+home+really+uses.;Save+it.+Prove+it.;Small+habits+for+cooler%2C+greener+neighbourhoods.;Built+in+India%2C+for+India." alt="Typing animation: See what your home really uses. Save it. Prove it."/>
+</a>
 
 [![Track](https://img.shields.io/badge/Track_03-Waste_%26_Energy-2F7A4A?style=for-the-badge&logo=leaflet&logoColor=white)](#)
 [![Hackathon](https://img.shields.io/badge/Environmental_Hacks-AWS_×_Bharat_Builds_Tour-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white)](#)
 [![PWA](https://img.shields.io/badge/Mobile--first-PWA-5FAE6B?style=for-the-badge&logo=pwa&logoColor=white)](#)
 [![Made in India](https://img.shields.io/badge/Made_in-India_🇮🇳-FF9933?style=for-the-badge)](#)
+
+![UN SDG 7](https://img.shields.io/badge/UN_SDG_7-Affordable_%26_Clean_Energy-FCC30B?style=flat-square)
+![UN SDG 11](https://img.shields.io/badge/UN_SDG_11-Sustainable_Cities-F99D26?style=flat-square)
+![UN SDG 13](https://img.shields.io/badge/UN_SDG_13-Climate_Action-3F7E44?style=flat-square)
+![Status](https://img.shields.io/badge/status-baseline_blueprint_v1.0-7EC8E3?style=flat-square)
+![Languages](https://img.shields.io/badge/languages-3_reviewed_·_7_beta-5FAE6B?style=flat-square)
+![Sources](https://img.shields.io/badge/numbers-no_source%2C_no_number-2F7A4A?style=flat-square)
 
 ![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)
 ![AWS Amplify](https://img.shields.io/badge/Amplify-FF9900?style=flat-square&logo=awsamplify&logoColor=white)
@@ -18,9 +25,8 @@
 ![DynamoDB](https://img.shields.io/badge/DynamoDB-4053D6?style=flat-square&logo=amazondynamodb&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Bedrock](https://img.shields.io/badge/Bedrock-01A88D?style=flat-square&logo=amazonaws&logoColor=white)
-![Status](https://img.shields.io/badge/status-baseline_blueprint_v1.0-7EC8E3?style=flat-square)
 
-<sub>Builder: <b>Harshil Kalsariya & Sravya Maddipati</b> Blueprint v1.0 · 8 October 2026</sub>
+<sub>Builder: <b>Harshil Kalsariya</b> (solo build) · Blueprint v1.0 · 8 October 2026</sub>
 
 </div>
 
@@ -38,11 +44,17 @@ Most Indian households see electricity as **one number on a bill, once a month**
 
 A friendly sparrow guides the user. The **nest** on the dashboard grows when the home saves energy and fades when it doesn't. Gentle, never scolding.
 
-### 🎯 Three measured outputs
+<img src="assets/earth.svg" alt="kWh saved, CO2 avoided, rupees saved" width="100%"/>
 
 | ⚡ kWh saved | 🌍 CO₂ avoided | 💰 Rupees saved |
 |:---:|:---:|:---:|
 | from bill-to-bill comparison | from a cited grid emission factor | from the cited tariff slabs |
+
+### 🌿 Why it matters
+
+| 🌏 Planet | 🏠 Home | 🐦 Neighbourhood |
+|---|---|---|
+| Lower electricity use means less grid demand, which means fewer emissions | Lower bills and clearer decisions, in your own language | Cooler, greener streets start with small habits |
 
 ### 🤔 Why it is not just a chatbot
 
@@ -84,6 +96,11 @@ flowchart LR
     D --> E[⚙️ Quick setup<br/>~60 sec]
     E --> F[🪺 Dashboard]
     A -. Try the demo .-> G[🧪 SAMPLE home]
+    F --> H[🎯 Mission]
+    H --> I[🧾 Next bill]
+    I --> J{Saved?}
+    J -- yes --> K[🌳 Nest grows]
+    J -- no --> L[🍂 Nest fades gently]
 ```
 
 1. **Landing** — one light screen: the sparrow, tagline, promise, **Get started** and **Try the demo**. Language picker visible from second one. No autoplaying media.
@@ -106,6 +123,21 @@ flowchart LR
 | ☀️ **Solar planner** | Draw your roof; get system size, generation, cost, payback, subsidy, and a PDF application packet |
 | 📲 **Share card** | A picture of your nest, ready for WhatsApp |
 | ⚙️ **Settings** | Language, watch the story again, delete my data |
+
+<img src="assets/solar.svg" alt="Rooftop solar planner" width="100%"/>
+
+### ☀️ Solar planner flow
+
+```mermaid
+flowchart LR
+    A[🗺️ Draw roof<br/>on map] --> B[📐 Area from polygon]
+    B --> C[🌤️ Local sunlight data]
+    C --> D[🧾 Your bill history]
+    D --> E[📊 Size · generation · cost · payback · subsidy]
+    E --> F[📄 PDF application packet]
+```
+
+> Subsidy terms are pulled only from the official government portal, with the year shown. Until verified, the app shows *"coming soon"* instead of a guess.
 
 <img src="assets/divider1.svg" alt="" width="100%"/>
 
@@ -133,7 +165,7 @@ A 60–90 second, dialogue-free film (music and visuals, with WebVTT captions in
 - **Noto Sans** family fonts for correct rendering of every script, tested on a real phone
 - The sparrow's local name is shown per language (for example *Chakli* in Gujarati), confirmed by a native speaker
 
-<img src="assets/divider1.svg" alt="" width="100%"/>
+<img src="assets/divider.svg" alt="" width="100%"/>
 
 ## 🏗️ Architecture (AWS)
 
@@ -262,27 +294,68 @@ npm run dev
 - Projections (like *"if 1 lakh homes did this…"*) are labelled as **projections**, not results.
 - Languages not yet reviewed by a native speaker are tagged **beta**.
 
-## 🆓 Free resources this project can build on
+<img src="assets/divider1.svg" alt="" width="100%"/>
+
+## 🆓 Free & open sources this project builds on
+
+> Licences and terms must be verified before relying on any of these, as the blueprint's own checklist says.
+
+### 🌍 Data (to be cited on screen, with year)
+
+| Need | Free source |
+|---|---|
+| Grid CO₂ emission factor (India) | [CEA CO₂ Baseline Database](https://cea.nic.in) (Central Electricity Authority) |
+| Electricity tariffs (Gujarat) | [GERC](https://gercin.org) tariff orders |
+| Rooftop solar scheme and subsidy | [PM Surya Ghar portal](https://pmsuryaghar.gov.in) |
+| Efficiency and star ratings | [BEE India](https://beeindia.gov.in) |
+| Sunlight / solar irradiance | [NASA POWER](https://power.larc.nasa.gov), [PVGIS](https://joint-research-centre.ec.europa.eu/pvgis-online-tool_en), [Global Solar Atlas](https://globalsolaratlas.info) |
+| Weather and temperature | [Open-Meteo](https://open-meteo.com) (free, no key for non-commercial use) |
+| Open government data | [data.gov.in](https://data.gov.in) |
+| Energy statistics | [Our World in Data](https://ourworldindata.org/energy), [IEA free data](https://www.iea.org/data-and-statistics) |
+
+### 🛠️ Build tools
+
+| Need | Free option |
+|---|---|
+| Maps and roof drawing | [Leaflet](https://leafletjs.com) + [Leaflet.draw](https://github.com/Leaflet/Leaflet.draw) + [OpenStreetMap](https://www.openstreetmap.org) (check attribution rules) |
+| Polygon area maths | [Turf.js](https://turfjs.org) |
+| Charts | [Chart.js](https://www.chartjs.org), [Recharts](https://recharts.org) |
+| PDF packet | [ReportLab](https://www.reportlab.com/opensource/), [pdf-lib](https://pdf-lib.js.org) |
+| PWA tooling | [Workbox](https://developer.chrome.com/docs/workbox), [Lighthouse](https://developer.chrome.com/docs/lighthouse) |
+| i18n | [react-i18next](https://react.i18next.com) |
+| Fonts | [Noto Sans](https://fonts.google.com/noto) (SIL Open Font License) |
+| Icons | [Lucide](https://lucide.dev), [Twemoji](https://github.com/twitter/twemoji), [Phosphor](https://phosphoricons.com) |
+| Illustrations | [unDraw](https://undraw.co), [Open Peeps](https://www.openpeeps.com), [SVG Repo](https://www.svgrepo.com) (check each licence) |
+| Photos | [Unsplash](https://unsplash.com), [Pexels](https://www.pexels.com) |
+| Design | [Stitch](https://stitch.withgoogle.com), [Figma free tier](https://www.figma.com) |
+
+### 🎬 Story video
+
+| Need | Free option |
+|---|---|
+| Editing | [DaVinci Resolve (free)](https://www.blackmagicdesign.com/products/davinciresolve), [Shotcut](https://shotcut.org), [CapCut](https://www.capcut.com) |
+| Music | [YouTube Audio Library](https://studio.youtube.com), [Free Music Archive](https://freemusicarchive.org), [Pixabay Music](https://pixabay.com/music/) |
+| Stock footage | [Pexels Videos](https://www.pexels.com/videos/), [Pixabay Videos](https://pixabay.com/videos/) |
+| Captions (WebVTT) | [Subtitle Edit](https://www.nikse.dk/subtitleedit), [Aegisub](https://aegisub.org) |
+| Compression | [HandBrake](https://handbrake.fr), [FFmpeg](https://ffmpeg.org) |
+
+### 📣 README and demo polish
 
 | Need | Free option |
 |---|---|
 | Badges | [Shields.io](https://shields.io) |
-| Diagrams | [Mermaid](https://mermaid.js.org) (renders natively on GitHub) |
-| Fonts | [Noto Sans](https://fonts.google.com/noto) (SIL Open Font License) |
-| Icons | [Lucide](https://lucide.dev), [Twemoji](https://github.com/twitter/twemoji) |
-| Maps and roof drawing | [Leaflet](https://leafletjs.com) + [OpenStreetMap](https://www.openstreetmap.org) (check attribution rules) |
-| Sunlight data | [NASA POWER](https://power.larc.nasa.gov) / [PVGIS](https://joint-research-centre.ec.europa.eu/pvgis-online-tool_en) (verify licence terms before use) |
-| Video editing | [DaVinci Resolve (free)](https://www.blackmagicdesign.com/products/davinciresolve), [Shotcut](https://shotcut.org) |
-| Music | [YouTube Audio Library](https://studio.youtube.com), [Free Music Archive](https://freemusicarchive.org) (check each licence) |
-| Charts | [Chart.js](https://www.chartjs.org) |
-| PDF generation | [ReportLab](https://www.reportlab.com/opensource/) / [pdf-lib](https://pdf-lib.js.org) |
-
-<sub>Licences and terms must be verified before relying on any of these, as the blueprint's own checklist says.</sub>
+| Typing animation | [readme-typing-svg](https://github.com/DenverCoder1/readme-typing-svg) |
+| Diagrams | [Mermaid](https://mermaid.js.org) (renders natively on GitHub), [draw.io](https://www.drawio.com), [Excalidraw](https://excalidraw.com) |
+| Banners | [Capsule Render](https://github.com/kyechan99/capsule-render) |
+| Architecture icons | [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/) |
 
 <div align="center">
 <br/>
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12,20,24&height=120&section=footer" alt="" width="100%"/>
 <img src="assets/footer1.svg" alt="Small habits for cooler, greener neighbourhoods" width="100%"/>
 
-**Made by [Harshil Kalsariya](https://github.com/harshil6-lab/)** & [Sravya Maddipati](https://github.com/sravya-77)** · *Sparrow — The Indian Energy Saver*
+**Made by [Harshil Kalsariya](https://github.com/harshil6-lab/)** & [Sravya Maddipati](https://github.com/sravya-77/)** · *Sparrow — The Indian Energy Saver*
+
+🌳 *Plant a habit. Watch the nest grow.*
 
 </div>
