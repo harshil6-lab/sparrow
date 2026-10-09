@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 200" width="1200" height="200" role="img" aria-label="Footer: small habits for cooler, greener neighbourhoods">
+  <defs>
+    <linearGradient id="fsky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF4D6"/>
+      <stop offset="1" stop-color="#CDEBDD"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="200" fill="url(#fsky)"/>
+  <path d="M0 140 Q200 100 420 135 T840 125 T1200 135 L1200 200 L0 200Z" fill="#5FAE6B"/>
+  <path d="M0 170 Q300 140 600 168 T1200 160 L1200 200 L0 200Z" fill="#2F7A4A"/>
+
+  <!-- grass blades -->
+  <g stroke="#1F5C3A" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M60 200 Q56 175 64 160"><animate attributeName="d" values="M60 200 Q56 175 64 160;M60 200 Q64 175 56 160;M60 200 Q56 175 64 160" dur="3s" repeatCount="indefinite"/></path>
+    <path d="M78 200 Q74 180 84 166"><animate attributeName="d" values="M78 200 Q74 180 84 166;M78 200 Q84 180 74 166;M78 200 Q74 180 84 166" dur="3.6s" repeatCount="indefinite"/></path>
+    <path d="M1120 200 Q1116 176 1126 162"><animate attributeName="d" values="M1120 200 Q1116 176 1126 162;M1120 200 Q1126 176 1116 162;M1120 200 Q1116 176 1126 162" dur="3.2s" repeatCount="indefinite"/></path>
+  </g>
+
+  <!-- nest -->
+  <g transform="translate(600 118)">
+    <ellipse cx="0" cy="32" rx="62" ry="18" fill="#7A5230"/>
+    <ellipse cx="0" cy="26" rx="52" ry="14" fill="#9C6B3F"/>
+    <ellipse cx="0" cy="22" rx="40" ry="9" fill="#5B3D22"/>
+    <g>
+      <ellipse cx="-14" cy="6" rx="14" ry="11" fill="#A87848"/>
+      <circle cx="-6" cy="-2" r="7" fill="#B88A58"/>
+      <path d="M-1 -2 L6 0 L-1 2Z" fill="#F2A33A"/>
+      <circle cx="-4" cy="-4" r="1.4" fill="#1D1D1D"/>
+    </g>
+    <g>
+      <ellipse cx="16" cy="8" rx="12" ry="9" fill="#9C6B3F"/>
+      <circle cx="23" cy="2" r="6" fill="#AD7C4B"/>
+      <path d="M28 2 L34 4 L28 6Z" fill="#F2A33A"/>
+      <circle cx="25" cy="0" r="1.2" fill="#1D1D1D"/>
+    </g>
+    <animateTransform attributeName="transform" type="translate" values="600 118;600 115;600 118" dur="3s" repeatCount="indefinite"/>
+  </g>
+
+  <g font-family="'Noto Sans','Segoe UI',Arial,sans-serif" text-anchor="middle">
+    <text x="600" y="52" font-size="26" font-weight="700" fill="#1F5C3A">Small habits for cooler, greener neighbourhoods.</text>
+    <text x="600" y="80" font-size="15" fill="#3C5A48">Built in India, for India.</text>
+  </g>
+</svg>

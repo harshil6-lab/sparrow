@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 380" width="1200" height="380" role="img" aria-label="Sparrow - The Indian Energy Saver banner">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7EC8E3"/>
+      <stop offset="0.65" stop-color="#E8F6EF"/>
+      <stop offset="1" stop-color="#FFF4D6"/>
+    </linearGradient>
+    <linearGradient id="hill1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5FAE6B"/>
+      <stop offset="1" stop-color="#3C8550"/>
+    </linearGradient>
+    <linearGradient id="hill2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2F7A4A"/>
+      <stop offset="1" stop-color="#1F5C3A"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFE08A"/>
+      <stop offset="1" stop-color="#FFB547" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="380" fill="url(#sky)"/>
+
+  <!-- sun glow -->
+  <circle cx="1020" cy="90" r="120" fill="url(#sun)">
+    <animate attributeName="r" values="110;130;110" dur="6s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="1020" cy="90" r="38" fill="#FFD166"/>
+
+  <!-- clouds -->
+  <g fill="#FFFFFF" opacity="0.85">
+    <g>
+      <ellipse cx="220" cy="80" rx="60" ry="18"/>
+      <ellipse cx="260" cy="68" rx="40" ry="16"/>
+      <ellipse cx="185" cy="70" rx="32" ry="13"/>
+      <animateTransform attributeName="transform" type="translate" values="0 0;60 0;0 0" dur="30s" repeatCount="indefinite"/>
+    </g>
+    <g>
+      <ellipse cx="640" cy="50" rx="50" ry="14"/>
+      <ellipse cx="675" cy="42" rx="32" ry="12"/>
+      <animateTransform attributeName="transform" type="translate" values="0 0;-50 0;0 0" dur="26s" repeatCount="indefinite"/>
+    </g>
+  </g>
+
+  <!-- hills -->
+  <path d="M0 300 Q200 230 420 285 T820 270 T1200 285 L1200 380 L0 380Z" fill="url(#hill1)"/>
+  <path d="M0 340 Q250 290 520 330 T1000 320 T1200 335 L1200 380 L0 380Z" fill="url(#hill2)"/>
+
+  <!-- tree (left) -->
+  <g>
+    <rect x="96" y="215" width="14" height="95" rx="5" fill="#6B4A2F"/>
+    <circle cx="103" cy="195" r="46" fill="#2F8F5B"/>
+    <circle cx="70" cy="215" r="30" fill="#3FA56B"/>
+    <circle cx="138" cy="212" r="32" fill="#3FA56B"/>
+    <animateTransform attributeName="transform" type="rotate" values="-0.6 103 310;0.6 103 310;-0.6 103 310" dur="5s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- power wire with sparrows -->
+  <path d="M0 150 Q300 175 600 160 T1200 150" stroke="#44505A" stroke-width="2.5" fill="none"/>
+
+  <!-- sparrow on wire (original simple bird) -->
+  <g transform="translate(850 138)">
+    <ellipse cx="0" cy="0" rx="17" ry="12" fill="#9C6B3F"/>
+    <circle cx="15" cy="-8" r="8" fill="#A87848"/>
+    <path d="M22 -8 L30 -6 L22 -4Z" fill="#F2A33A"/>
+    <circle cx="17" cy="-10" r="1.6" fill="#1D1D1D"/>
+    <path d="M-14 0 L-30 6 L-12 6Z" fill="#7A5230"/>
+    <path d="M-4 -2 Q4 -10 10 0 Q2 6 -4 -2Z" fill="#7A5230"/>
+    <path d="M-2 11 L-2 17 M4 11 L4 17" stroke="#7A5230" stroke-width="1.5"/>
+    <animateTransform attributeName="transform" type="translate" values="850 138;850 135;850 138" dur="2.4s" repeatCount="indefinite"/>
+  </g>
+  <g transform="translate(905 144) scale(0.8)">
+    <ellipse cx="0" cy="0" rx="17" ry="12" fill="#B07C4A"/>
+    <circle cx="15" cy="-8" r="8" fill="#BC8955"/>
+    <path d="M22 -8 L30 -6 L22 -4Z" fill="#F2A33A"/>
+    <circle cx="17" cy="-10" r="1.6" fill="#1D1D1D"/>
+    <path d="M-14 0 L-30 6 L-12 6Z" fill="#7A5230"/>
+  </g>
+
+  <!-- leaves drifting -->
+  <g fill="#7BCF8E" opacity="0.9">
+    <path d="M0 0 Q8 -6 16 0 Q8 6 0 0Z">
+      <animateMotion dur="14s" repeatCount="indefinite" path="M300 -10 C380 80 260 160 340 260 S420 350 380 400"/>
+    </path>
+    <path d="M0 0 Q8 -6 16 0 Q8 6 0 0Z">
+      <animateMotion dur="18s" begin="3s" repeatCount="indefinite" path="M760 -10 C700 90 820 170 740 270 S690 360 720 400"/>
+    </path>
+  </g>
+
+  <!-- title -->
+  <g font-family="'Noto Sans','Segoe UI',Arial,sans-serif">
+    <text x="600" y="228" text-anchor="middle" font-size="86" font-weight="800" fill="#173F2B" stroke="#FFFFFF" stroke-width="6" paint-order="stroke">Sparrow</text>
+    <text x="600" y="270" text-anchor="middle" font-size="28" font-weight="600" fill="#1F5C3A" stroke="#FFFFFF" stroke-width="4" paint-order="stroke">The Indian Energy Saver</text>
+    <text x="600" y="306" text-anchor="middle" font-size="17" font-weight="500" fill="#FFF8E6" letter-spacing="3">SEE IT  ·  SAVE IT  ·  PROVE IT</text>
+  </g>
+</svg>
