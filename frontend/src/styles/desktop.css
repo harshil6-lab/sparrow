@@ -1,0 +1,22 @@
+/*
+ * Desktop / laptop layout (>=900px).
+ * Every rule here lives inside a min-width:900px block so that viewports
+ * <=899px render exactly as before.
+ */
+
+/* ---- Splash (Step 1) ---------------------------------------------------- */
+/* Full-bleed gradient, glow and leaves: undo the centred-app-column cap. */
+@media (min-width: 900px) {
+  .splash,
+  .landing,
+  .story-player,
+  .setup-screen,
+  .ready-screen,
+  .auth-screen {
+    max-width: none;
+  }
+  .splash {
+    width: 100%;
+    overflow-x: hidden;
+  }
+}

@@ -9,12 +9,16 @@ import { SparrowMascot, type SparrowPose } from "../SparrowMascot";
  * screens except the shared <EditorialArt> shell.
  */
 
-/** Splash: falling leaves + the sparrow gliding in to land on the wire. */
-export function SplashScene() {
+/**
+ * Splash: falling leaves + the sparrow gliding in to land on the wire.
+ * `leafCount` lets the splash scale the number of leaves to the viewport width
+ * (the LeafLayer itself is unchanged; mobile keeps the default of 36).
+ */
+export function SplashScene({ leafCount }: { leafCount?: number }) {
   return (
     <>
       <div className="sunrise-glow" />
-      <LeafLayer />
+      <LeafLayer count={leafCount} />
       <div className="splash-bird">
         <div className="splash-wire" />
         <SparrowMascot pose="hop" size={150} />

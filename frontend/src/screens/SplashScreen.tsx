@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../components/ui/Button";
@@ -19,12 +19,31 @@ import { languageMeta } from "../i18n/languages";
  * "Enter Sparrow" continues to the user's gate: the app for a returning user,
  * the story/setup flow otherwise.
  */
+/**
+ * Leaves scale with viewport width: 36 at <900px (unchanged from the mobile
+ * baseline) up to the 60 maximum on wide desktops.
+ */
+function useSplashLeafCount(): number {
+  const [count, setCount] = useState(36);
+  useEffect(() => {
+    const compute = () => {
+      const w = window.innerWidth;
+      setCount(w < 900 ? 36 : Math.min(60, Math.max(36, Math.round(w / 28))));
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, []);
+  return count;
+}
+
 export function SplashScreen() {
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
   const { ready, profile } = useAuth();
   const [picker, setPicker] = useState(false);
   const navigate = useNavigate();
+  const leafCount = useSplashLeafCount();
 
   const enter = () => {
     if (ready && profile) {
@@ -36,7 +55,7 @@ export function SplashScreen() {
 
   return (
     <main className="splash">
-      <SplashScene />
+      <SplashScene leafCount={leafCount} />
       <div className="splash-wordmark">{t("splash.wordmark")}</div>
       <p>{t("splash.tagline")}</p>
       <Button variant="sun" className="splash-enter" icon="arrow" onClick={enter}>

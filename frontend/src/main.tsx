@@ -12,6 +12,7 @@ import "@fontsource/baloo-2/700.css";
 import "./styles/tokens.css";
 import "./styles/sparrow.css";
 import "./styles/app.css";
+import "./styles/desktop.css";
 
 import "./i18n";
 import App from "./App";
