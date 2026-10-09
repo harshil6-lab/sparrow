@@ -1,0 +1,8 @@
+node_modules/
+.aws-sam/
+__pycache__/
+.env
+
+
+#agents
+.refact
