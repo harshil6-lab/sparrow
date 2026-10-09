@@ -1,13 +1,16 @@
 import type { AuthProvider } from "./auth";
 import type { ProfileProvider } from "./profile";
+import type { DataProvider } from "./data";
 import { MockAuthProvider } from "./mockAuth";
 import { MockProfileProvider } from "./profile";
+import { MockDataProvider } from "./data";
 import { createCognitoAuthProvider } from "./cognito";
 import { USE_MOCK } from "../env";
 
 export interface Api {
   auth: AuthProvider;
   profiles: ProfileProvider;
+  data: DataProvider;
 }
 
 /**
@@ -17,9 +20,17 @@ export interface Api {
  */
 export function createApi(): Api {
   if (USE_MOCK) {
-    return { auth: new MockAuthProvider(), profiles: new MockProfileProvider() };
+    return {
+      auth: new MockAuthProvider(),
+      profiles: new MockProfileProvider(),
+      data: new MockDataProvider(),
+    };
   }
-  return { auth: createCognitoAuthProvider(), profiles: new MockProfileProvider() };
+  return {
+    auth: createCognitoAuthProvider(),
+    profiles: new MockProfileProvider(),
+    data: new MockDataProvider(),
+  };
 }
 
 export const api: Api = createApi();

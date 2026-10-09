@@ -3,6 +3,7 @@ import { api } from "./api";
 import type { Profile, SetupAnswers } from "./types";
 import { ensureProfile, withSetup } from "./api/profile";
 import { useLanguage } from "./LanguageProvider";
+import { clearDemoPending, isDemoPending } from "./demo";
 
 interface AuthContextValue {
   ready: boolean;
@@ -55,6 +56,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const existing = await api.profiles.load(user);
       const next = ensureProfile(user, language, existing);
       await persist(next);
+      if (isDemoPending()) {
+        await api.data.setDemo(user, true);
+        clearDemoPending();
+      }
       return next;
     },
     [language, persist],
@@ -65,6 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const existing = await api.profiles.load(user);
     const next = ensureProfile(user, language, existing);
     await persist(next);
+      if (isDemoPending()) {
+        await api.data.setDemo(user, true);
+        clearDemoPending();
+      }
     return next;
   }, [language, persist]);
 

@@ -4,6 +4,7 @@ import { Button } from "../components/ui/Button";
 import { SparrowLogo } from "../components/SparrowLogo";
 import { Icon } from "../components/Icon";
 import { WelcomeScene } from "../components/scenes/Scenes";
+import { requestDemo } from "../lib/demo";
 
 export function WelcomeScreen() {
   const { t } = useTranslation();
@@ -36,7 +37,7 @@ export function WelcomeScreen() {
           <Button icon="arrow" onClick={() => navigate("/login")}>
             {t("welcome.build")}
           </Button>
-          <Button variant="quiet" onClick={() => navigate("/login")}>
+          <Button variant="quiet" onClick={() => { requestDemo(); navigate("/login"); }}>
             {t("welcome.trySample")}
           </Button>
         </div>
