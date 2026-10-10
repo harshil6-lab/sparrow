@@ -1,0 +1,131 @@
+/*
+ * Desktop / laptop layout (>=900px).
+ * Every rule here lives inside a min-width:900px block, so viewports <=899px
+ * render exactly as before. No app-column element is positioned `fixed` against
+ * the viewport: the header is sticky inside the frame scroll area, the tab bar
+ * is a normal flex child, and sheets are absolute within the frame.
+ */
+
+/* ---- Step 1: Splash is always full-bleed ------------------------------- */
+@media (min-width: 900px) {
+  .splash,
+  .landing,
+  .story-player,
+  .setup-screen,
+  .ready-screen,
+  .auth-screen {
+    max-width: none;
+  }
+  .splash {
+    width: 100%;
+    overflow-x: hidden;
+  }
+}
+
+/* ---- Step 2: one centred app frame ------------------------------------- */
+@media (min-width: 900px) {
+  /* Backdrop outside the frame: soft green-cream gradient, no blank white. */
+  body {
+    background: linear-gradient(160deg, var(--bg) 0%, #e6efdf 55%, var(--soft) 100%);
+    background-attachment: fixed;
+  }
+
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    width: min(480px, 100%);
+    height: 100dvh;
+    min-height: 0;
+    margin-inline: auto;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  /* The side rail is replaced by the in-frame header + bottom tab bar. */
+  .side-nav {
+    display: none;
+  }
+
+  /* The scroll area — the only thing that scrolls. */
+  .app-main {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Frame header: logo + avatar, sticky inside the frame scroll area. */
+  .app-main > header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    height: calc(68px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    background: rgba(245, 248, 241, 0.96);
+  }
+  .app-main > header .mobile-logo {
+    display: block;
+  }
+  .app-main > header > div:not(.mobile-logo) {
+    display: none;
+  }
+
+  /* Bottom tab bar: a normal flex child of the frame, never viewport-fixed. */
+  .bottom-nav {
+    display: grid;
+    position: static;
+    bottom: auto;
+    left: auto;
+    right: auto;
+    z-index: auto;
+    width: 100%;
+    height: auto;
+    grid-template-columns: repeat(5, 1fr);
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--white);
+    border-top: 1px solid var(--line);
+  }
+  .bottom-nav button {
+    min-height: 62px;
+    border: 0;
+    background: var(--white);
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 14px;
+  }
+  .bottom-nav button.active {
+    color: var(--forest);
+    background: #edf4e9;
+  }
+
+  /* Content can never end up behind the tab bar (flex sibling, not overlay). */
+  .page {
+    padding-bottom: 34px;
+  }
+
+  /* Sheets live inside the frame (portal target) and are positioned to it. */
+  [data-app-frame] .overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+  }
+  [data-app-frame] .sheet,
+  [data-app-frame] .language-sheet,
+  [data-app-frame] .settings-sheet,
+  [data-app-frame] .share-sheet,
+  [data-app-frame] .bill-sheet,
+  [data-app-frame] .sweep-sheet,
+  [data-app-frame] .detail-sheet,
+  [data-app-frame] .nest-sheet,
+  [data-app-frame] .reminder-sheet,
+  [data-app-frame] .confirm-sheet {
+    max-height: calc(100% - 24px);
+  }
+}
