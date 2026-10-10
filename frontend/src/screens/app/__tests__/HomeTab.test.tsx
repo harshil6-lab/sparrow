@@ -54,6 +54,32 @@ describe("Home, verified bills", () => {
     expect(screen.getByText("Verified and thriving")).toBeInTheDocument();
     expect(screen.queryByText("SAMPLE")).toBeNull();
   });
+
+  it("shows CO2 and the user's own-rate rupees when the baseline has an amount", () => {
+    renderHome({
+      state: "thriving",
+      bills: [bill(170, "2025-06"), { ...bill(200, "2025-05"), amount: 1500 }],
+    });
+    expect(screen.getByText("about 21 kg CO₂")).toBeInTheDocument();
+    expect(screen.getByText("about ₹225")).toBeInTheDocument();
+    expect(screen.queryByText("SAMPLE")).toBeNull();
+  });
+
+  it("keeps every derived figure SAMPLE-badged in demo mode", () => {
+    renderHome({
+      state: "thriving",
+      demo: true,
+      bills: [bill(170, "2025-06"), { ...bill(200, "2025-05"), amount: 1500 }],
+    });
+    expect(screen.getByText("about 21 kg CO₂")).toBeInTheDocument();
+    expect(screen.getByText("about ₹225")).toBeInTheDocument();
+    expect(screen.getAllByText("SAMPLE").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("prompts for the bill amount when the baseline has none", () => {
+    renderHome({ state: "thriving", bills: [bill(170, "2025-06"), bill(200, "2025-05")] });
+    expect(screen.getByText("Add your bill amount to see rupees")).toBeInTheDocument();
+  });
 });
 
 describe("Home, completed sweep", () => {

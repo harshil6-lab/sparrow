@@ -1,102 +1,143 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../../components/Icon";
 import { SparrowMascot } from "../../components/SparrowMascot";
 import { Sheet } from "../../components/ui/Sheet";
 import { api } from "../../lib/api";
-import type { Bill } from "../../lib/api/data";
+import type { AddBillResult } from "../../lib/api/data";
+import { HttpError, NetworkError } from "../../lib/api/http";
 import { useAuth } from "../../lib/AuthProvider";
-import { currentMonthKey, parseUnits, validateUnits, type UnitsError } from "../../lib/bills";
+import {
+  currentMonthKey,
+  parseAmount,
+  parseUnits,
+  buildBillPayload,
+  validateAmount,
+  validateUnits,
+  type AmountError,
+  type UnitsError,
+} from "../../lib/bills";
+import { compressBillPhoto } from "../../lib/photos";
 import { VerificationResult } from "./VerificationResult";
 
-type Phase = "entry" | "loading" | "done" | "error";
-type PhotoState = "idle" | "loading" | "ready" | "error";
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
+type Phase = "entry" | "loading" | "photo-error" | "done" | "error";
 /**
  * Bill sheet: entry -> loading -> baseline / verification result, plus an error
  * state. Reuses the export's markup; the units field validates inline (required,
- * number, 1-5000), the month picker defaults to the current month, and the
- * optional photo is stored locally (never parsed).
+ * number, 1-5000), the month picker defaults to the current month. The POST
+ * body is deliberately limited to the server bill contract.
  */
 export function BillSheet({
   open,
   onClose,
   demo,
-  previousBill,
+  wifiOnly,
   onSaved,
   onShare,
 }: {
   open: boolean;
   onClose: () => void;
   demo: boolean;
-  /** The latest stored bill before this one — null for a first (baseline) bill. */
-  previousBill: Bill | null;
+  wifiOnly: boolean;
   onSaved: () => Promise<void>;
   onShare: (kwh: number) => void;
 }) {
   const { t } = useTranslation();
   const { profile } = useAuth();
   const [units, setUnits] = useState("");
+  const [amount, setAmount] = useState("");
   const [month, setMonth] = useState(() => currentMonthKey());
   const [unitsError, setUnitsError] = useState<UnitsError>(null);
-  const [photo, setPhoto] = useState<PhotoState>("idle");
-  const [photoDataUrl, setPhotoDataUrl] = useState<string | undefined>(undefined);
+  const [amountError, setAmountError] = useState<AmountError>(null);
   const [phase, setPhase] = useState<Phase>("entry");
-  const [saved, setSaved] = useState<Bill | null>(null);
-  const [baseline, setBaseline] = useState<Bill | null>(null);
+  const [saved, setSaved] = useState<AddBillResult | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<Blob | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoProgress, setPhotoProgress] = useState(0);
+  const retryPhoto = useRef(false);
 
   useEffect(() => {
     if (!open) return;
     setUnits("");
+    setAmount("");
     setMonth(currentMonthKey());
     setUnitsError(null);
-    setPhoto("idle");
-    setPhotoDataUrl(undefined);
+    setAmountError(null);
     setPhase("entry");
     setSaved(null);
-    setBaseline(null);
+    setErrorMessage(null);
+    setPhoto(null);
+    setPhotoPreview(null);
+    setPhotoError(null);
+    setPhotoProgress(0);
+    retryPhoto.current = false;
   }, [open]);
 
-  const readPhoto = (file?: File) => {
+  const choosePhoto = async (file: File | undefined) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setPhoto("error");
-      return;
+    try {
+      const compressed = await compressBillPhoto(file);
+      setPhoto(compressed);
+      setPhotoPreview(URL.createObjectURL(compressed));
+      setPhotoError(null);
+    } catch (error) {
+      setPhotoError(error instanceof Error && error.message === "unsupported photo type"
+        ? t("bill.photoTypeError")
+        : t("bill.photoSizeError"));
     }
-    setPhoto("loading");
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPhotoDataUrl(typeof reader.result === "string" ? reader.result : undefined);
-      setPhoto("ready");
-    };
-    reader.onerror = () => setPhoto("error");
-    reader.readAsDataURL(file);
   };
 
-  const submit = async () => {
+  const submit = async (retry = false) => {
     const error = validateUnits(units);
-    if (error) {
+    const nextAmountError = validateAmount(amount);
+    if (error || nextAmountError) {
       setUnitsError(error);
+      setAmountError(nextAmountError);
       return;
     }
     const value = parseUnits(units);
+    const amountValue = parseAmount(amount);
     if (!profile || value === null) return;
-    const previous = previousBill;
-    setBaseline(previous);
     setPhase("loading");
+    setErrorMessage(null);
     try {
-      await delay(450);
-      const bill = await api.data.addBill(profile.user, {
-        month,
-        units: value,
-        ...(photoDataUrl ? { photoDataUrl } : {}),
+      const result = await api.data.addBill(profile.user, {
+        ...buildBillPayload(month, value, amountValue),
       });
-      setSaved(bill);
+      setSaved(result);
       await onSaved();
+      if (photo && (!retry || retryPhoto.current)) {
+        try {
+          setPhotoProgress(0);
+          await api.data.uploadBillPhoto(profile.user, month, photo, wifiOnly, setPhotoProgress);
+          await onSaved();
+        } catch (photoUploadError) {
+          retryPhoto.current = true;
+          setPhotoError(photoUploadError instanceof HttpError && photoUploadError.status === 404
+            ? t("bill.photoNotFound")
+            : t("bill.photoFailed"));
+          setPhase("photo-error");
+          return;
+        }
+      }
       setPhase("done");
-    } catch {
+    } catch (error) {
+      if (import.meta.env.DEV && error instanceof NetworkError) {
+        console.error("[sparrow] network error", error);
+      }
+      if (error instanceof HttpError && error.status === 400) {
+        setErrorMessage(t("bill.saveErrorValidation", { details: error.message }));
+      } else if (error instanceof HttpError && error.status === 401) {
+        setErrorMessage(t("bill.saveErrorSession"));
+      } else if (error instanceof HttpError && error.status >= 500) {
+        setErrorMessage(t("bill.saveErrorServer"));
+      } else if (error instanceof NetworkError) {
+        setErrorMessage(t("bill.saveErrorNetwork"));
+      } else {
+        setErrorMessage(t("bill.saveError"));
+      }
       setPhase("error");
     }
   };
@@ -110,9 +151,7 @@ export function BillSheet({
       closeLabel={t("bill.close")}
     >
       {phase === "done" && saved ? (
-        baseline ? (
-          <VerificationResult previous={baseline} bill={saved} demo={demo} onShare={onShare} onClose={onClose} />
-        ) : (
+        saved.verification.baseline ? (
           <>
             <SparrowMascot pose="hop" size={110} />
             <div className="eyebrow">{t("bill.baselineEyebrow")}</div>
@@ -122,6 +161,14 @@ export function BillSheet({
               {t("bill.seeNest")} <Icon name="arrow" size={18} />
             </button>
           </>
+        ) : (
+          <VerificationResult
+            bill={saved.bill}
+            verification={saved.verification}
+            demo={demo}
+            onShare={onShare}
+            onClose={onClose}
+          />
         )
       ) : phase === "loading" ? (
         <div className="loading-state">
@@ -130,11 +177,20 @@ export function BillSheet({
           <h2>{t("bill.loadingTitle")}</h2>
           <p>{t("bill.loadingCopy")}</p>
         </div>
+      ) : phase === "photo-error" && saved ? (
+        <div className="list-state">
+          <Icon name="bill" size={34} />
+          <strong>{t("bill.photoSavedTitle")}</strong>
+          <p>{photoError ?? t("bill.photoFailed")}</p>
+          {photoProgress > 0 ? <progress max="100" value={photoProgress} aria-label={t("bill.photoProgress")} /> : null}
+          <button className="primary-button wide" onClick={() => void submit(true)}>{t("bill.photoRetry")}</button>
+          <button className="quiet-button" onClick={() => setPhase("done")}>{t("bill.photoSkip")}</button>
+        </div>
       ) : phase === "error" ? (
         <div className="list-state">
           <Icon name="bill" size={34} />
           <strong>{t("bill.saveError")}</strong>
-          <p>{t("bill.saveErrorHint")}</p>
+          <p>{errorMessage ?? t("bill.saveErrorHint")}</p>
           <button className="quiet-button" onClick={() => setPhase("entry")}>
             {t("home.retry")}
           </button>
@@ -166,26 +222,49 @@ export function BillSheet({
             </div>
           ) : null}
           <label>
+            {t("bill.amountLabel")}
+            <input
+              className={amountError ? "error" : ""}
+              inputMode="numeric"
+              value={amount}
+              aria-invalid={amountError ? true : undefined}
+              placeholder={t("bill.amountPlaceholder")}
+              onChange={(event) => {
+                setAmount(event.target.value);
+                setAmountError(null);
+              }}
+            />
+          </label>
+          {amountError ? <div className="inline-error">{t("bill.amountErrorRange")}</div> : null}
+          <small className="field-hint">{t("bill.amountHint")}</small>
+          <label>
             {t("bill.monthLabel")}
             <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
           </label>
-          <label className={`optional-upload upload-${photo}`}>
-            <Icon name={photo === "ready" ? "check" : "camera"} />
-            <span>
-              <strong>
-                {photo === "loading"
-                  ? t("bill.photoLoading")
-                  : photo === "ready"
-                    ? t("bill.photoReady")
-                    : photo === "error"
-                      ? t("bill.photoError")
-                      : t("bill.photoAdd")}
-              </strong>
-              <small>{photo === "error" ? t("bill.photoErrorHint") : t("bill.photoOptional")}</small>
-            </span>
-            {photo === "loading" ? <span className="spinner small" /> : null}
-            <input type="file" accept="image/*" onChange={(event) => readPhoto(event.target.files?.[0])} />
-          </label>
+          <div className="bill-photo-picker">
+            <div className="eyebrow">{t("bill.photoLabel")}</div>
+            {photoPreview ? (
+              <div>
+                <img src={photoPreview} alt={t("bill.photoAlt", { month })} className="bill-photo-thumb" />
+                <button type="button" className="text-button" onClick={() => { setPhoto(null); setPhotoPreview(null); }}>
+                  {t("bill.photoRemove")}
+                </button>
+              </div>
+            ) : (
+              <div className="photo-actions">
+                <label className="quiet-button">
+                  {t("bill.photoTake")}
+                  <input hidden type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(e) => void choosePhoto(e.target.files?.[0])} />
+                </label>
+                <label className="quiet-button">
+                  {t("bill.photoChoose")}
+                  <input hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => void choosePhoto(e.target.files?.[0])} />
+                </label>
+              </div>
+            )}
+            {photoError ? <div className="inline-error">{photoError}</div> : null}
+            <small className="field-hint">{t("bill.photoPrivacy")}</small>
+          </div>
           <button className="primary-button wide" onClick={() => void submit()}>
             {t("bill.verify")} <Icon name="arrow" size={18} />
           </button>

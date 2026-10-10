@@ -53,6 +53,27 @@
 .avatar.large {
   background: var(--forest);
 }
+.demo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--forest);
+  color: white;
+  font-size: 14px;
+}
+.demo-banner span { display: flex; gap: 12px; }
+.demo-banner button {
+  border: 0;
+  color: white;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  min-height: 32px;
+  cursor: pointer;
+}
 .language-list button { min-height: 54px; }
 .city-groups button { min-height: 48px; }
 .city-suggestions button { min-height: 48px; }
@@ -87,3 +108,70 @@
   border-radius: var(--radius);
 }
 
+/* B1.5: sourced CO2 figure, its "Source" sheet, and per-figure footnotes. */
+.source-button {
+  border: 0;
+  background: transparent;
+  color: var(--forest);
+  font: inherit;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  min-height: 48px;
+  padding: 0 2px;
+  text-decoration: underline;
+}
+.source-button:focus-visible {
+  outline: 3px solid var(--forest);
+  outline-offset: 2px;
+}
+.figure-note { color: var(--muted); }
+.source-figure {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.field-hint {
+  display: block;
+  color: var(--muted);
+  margin: -6px 0 12px;
+}
+.source-url { word-break: break-word; }
+.source-url-value { word-break: break-all; }
+
+/* On the dark share card, keep the figure text and its Source link legible. */
+.share-figures {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+.share-figures,
+.share-figures .figure-note,
+.share-figures .text-button,
+.share-card .source-button { color: var(--soft); }
+
+/* B2: the "Done today" line, the "source pending" chip and two new sheets. */
+.mission-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--forest);
+  font-weight: 700;
+}
+.source-chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  color: var(--muted);
+  font-size: var(--text-caption);
+  font-weight: 600;
+}
+.bills-list,
+.source-sheet {
+  border-radius: var(--radius);
+}

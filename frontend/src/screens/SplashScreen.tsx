@@ -45,6 +45,19 @@ export function SplashScreen() {
   const navigate = useNavigate();
   const leafCount = useSplashLeafCount();
 
+  /**
+   * Cognito's Hosted UI (Google) returns to "/" with ?code=... . Amplify
+   * exchanges it during hydration; once the profile is ready we continue
+   * straight through the same gate as any other sign-in instead of waiting for
+   * a tap. An ?error=... return simply falls through to /login.
+   */
+  const oauthReturn =
+    typeof window !== "undefined" && /[?&](code|error)=/.test(window.location.search);
+
+  useEffect(() => {
+    if (oauthReturn && ready) navigate(nextRoute(profile), { replace: true });
+  }, [oauthReturn, ready, profile, navigate]);
+
   const enter = () => {
     if (ready && profile) {
       navigate(nextRoute(profile), { replace: true });

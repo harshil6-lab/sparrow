@@ -3,6 +3,7 @@ import { initReactI18next } from "react-i18next";
 import en from "./locales/en.json";
 import hi from "./locales/hi.json";
 import { DEFAULT_LANGUAGE, LANGUAGES, type AppLanguage } from "./languages";
+import { isDemoPending } from "../lib/demo";
 
 /** Only languages with a real translation bundle ship resources. */
 const resources = {
@@ -11,10 +12,11 @@ const resources = {
 } as const;
 
 const STORAGE_KEY = "sparrow-language";
+const DEMO_STORAGE_KEY = "demo:sparrow-language";
 
 export function readStoredLanguage(): AppLanguage {
   try {
-    const value = localStorage.getItem(STORAGE_KEY);
+    const value = localStorage.getItem(isDemoPending() ? DEMO_STORAGE_KEY : STORAGE_KEY);
     if (value && LANGUAGES.some((l) => l.code === value)) return value as AppLanguage;
   } catch {
     /* localStorage unavailable (private mode / SSR) — fall through */
@@ -24,7 +26,7 @@ export function readStoredLanguage(): AppLanguage {
 
 export function persistLanguage(code: AppLanguage): void {
   try {
-    localStorage.setItem(STORAGE_KEY, code);
+    localStorage.setItem(isDemoPending() ? DEMO_STORAGE_KEY : STORAGE_KEY, code);
   } catch {
     /* ignore */
   }

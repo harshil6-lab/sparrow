@@ -27,14 +27,26 @@ describe("mock data provider (per user, localStorage)", () => {
   });
 
   it("treats the first bill as an unverified baseline", async () => {
-    const first = await data.addBill(user, { month: "2025-05", units: 200 });
-    expect(first.verified).toBe(false);
+    const { bill, verification } = await data.addBill(user, { month: "2025-05", units: 200 });
+    expect(bill.verified).toBe(false);
+    expect(verification).toEqual({ baseline: true });
+  });
+
+  it("stores the optional bill amount with the bill", async () => {
+    const { bill } = await data.addBill(user, { month: "2025-05", units: 200, amount: 1500 });
+    expect(bill.amount).toBe(1500);
+    const bills = await data.getBills(user);
+    expect(bills[0].amount).toBe(1500);
   });
 
   it("verifies a later bill using the impact math (200 -> 170)", async () => {
     await data.addBill(user, { month: "2025-05", units: 200 });
-    const second = await data.addBill(user, { month: "2025-06", units: 170 });
-    expect(second.verified).toBe(true);
+    const { bill, verification } = await data.addBill(user, { month: "2025-06", units: 170 });
+    expect(bill.verified).toBe(true);
+    expect(verification.baseline).toBe(false);
+    expect(verification.kwh_saved).toBe(30);
+    expect(verification.verified).toBe(true);
+    expect(typeof verification.co2_kg).toBe("number");
     const bills = await data.getBills(user);
     expect(bills.map((b) => b.units)).toEqual([170, 200]);
     expect(worldState(bills)).toBe("thriving");
@@ -45,6 +57,7 @@ describe("mock data provider (per user, localStorage)", () => {
     const dash = await data.getDashboard(user);
     expect(dash.demo).toBe(true);
     expect(dash.bills.map((b) => b.units)).toEqual([170, 200]);
+    expect(dash.bills[1].amount).toBe(1500);
     expect(worldState(dash.bills)).toBe("thriving");
     await data.setDemo(user, false);
     const cleared = await data.getDashboard(user);
@@ -57,10 +70,21 @@ describe("mock data provider (per user, localStorage)", () => {
     await data.addBill(user, { month: "2025-06", units: 180 });
     const before = await data.getBills(user);
     expect(worldState(before)).toBe("fresh");
-    await data.completeMission(user);
+    await data.completeMission(user, "standby_sweep");
     const after = await data.getBills(user);
     expect(worldState(after)).toBe("fresh");
     expect((await data.getDashboard(user)).missionDone).toBe(true);
+    expect((await data.getDashboard(user)).missionsDone).toEqual(["standby_sweep"]);
     expect(after.map((b) => b.units)).toEqual(before.map((b) => b.units));
+  });
+
+  it("keeps a non-sweep mission out of the world state too", async () => {
+    await data.addBill(user, { month: "2025-05", units: 200 });
+    await data.addBill(user, { month: "2025-06", units: 180 });
+    await data.completeMission(user, "ac");
+    const dash = await data.getDashboard(user);
+    expect(dash.missionsDone).toEqual(["ac"]);
+    expect(dash.missionDone).toBe(false);
+    expect(worldState(dash.bills)).toBe("fresh");
   });
 });

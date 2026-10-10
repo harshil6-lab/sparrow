@@ -13,12 +13,14 @@ export function ResultSheet({
   bills,
   demo,
   onShare,
+  onAddAmount,
 }: {
   open: boolean;
   onClose: () => void;
   bills: Bill[];
   demo: boolean;
   onShare: (kwh: number) => void;
+  onAddAmount: () => void;
 }) {
   const { t } = useTranslation();
   const latest = bills[0];
@@ -34,7 +36,14 @@ export function ResultSheet({
       closeLabel={t("bill.close")}
     >
       {latest && previous ? (
-        <VerificationResult previous={previous} bill={latest} demo={demo} onShare={onShare} onClose={onClose} />
+        <VerificationResult
+          previous={previous}
+          bill={latest}
+          demo={demo}
+          onShare={onShare}
+          onClose={onClose}
+          onAddAmount={onAddAmount}
+        />
       ) : null}
     </Sheet>
   );
