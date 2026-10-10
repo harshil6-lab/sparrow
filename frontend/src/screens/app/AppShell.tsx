@@ -1,49 +1,69 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
-import { Icon, type IconName } from "../../components/Icon";
+import { Icon } from "../../components/Icon";
 import { SparrowLogo } from "../../components/SparrowLogo";
-import { SparrowMascot } from "../../components/SparrowMascot";
 import { SheetPortalContext } from "../../components/ui/sheetPortal";
 import { api } from "../../lib/api";
-import type { Dashboard } from "../../lib/api/data";
+import { DEFAULT_SETTINGS, type Dashboard, type Settings } from "../../lib/api/data";
 import { useAuth } from "../../lib/AuthProvider";
+import { FEATURE_SOLAR, LEARN_CLIP_URL } from "../../lib/env";
+import { FACTS } from "../../lib/learn";
+import type { SetupAnswers } from "../../lib/types";
 import { worldState } from "../../lib/world";
 import { ProfileSheet } from "./ProfileSheet";
 import { HomeTab } from "./HomeTab";
+import { MissionsTab } from "./MissionsTab";
+import { LearnTab } from "./LearnTab";
+import { MeTab, verifiedTotals } from "./MeTab";
 import { SweepSheet } from "./SweepSheet";
 import { BillSheet } from "./BillSheet";
 import { ResultSheet } from "./ResultSheet";
 import { ShareSheet } from "./ShareSheet";
+import { ClipSheet, LearnDetailSheet, MissionDetailSheet } from "./DetailSheets";
+import { BillsSheet, ConfirmSheet, NestSheet, RemindersSheet } from "./ProfileSheets";
+import { TabError, TabLoading } from "./TabState";
+import { TAB_PATHS, navItems, tabFromPath, type TabId } from "./tabs";
+import { clearDemo } from "../../lib/demo";
+import { resetApi } from "../../lib/api";
 
-type TabId = "home" | "missions" | "learn" | "solar" | "me";
-type Overlay = "sweep" | "bill" | "result" | "share" | null;
-
-function navItems(t: TFunction): { id: TabId; label: string; icon: IconName }[] {
-  return [
-    { id: "home", label: t("app.tabsHome"), icon: "home" },
-    { id: "missions", label: t("app.tabsMissions"), icon: "bolt" },
-    { id: "learn", label: t("app.tabsLearn"), icon: "book" },
-    { id: "solar", label: t("app.tabsSolar"), icon: "sun" },
-    { id: "me", label: t("app.tabsMe"), icon: "user" },
-  ];
-}
+type Overlay =
+  | "sweep"
+  | "bill"
+  | "result"
+  | "share"
+  | "mission"
+  | "learn"
+  | "clip"
+  | "nest"
+  | "bills"
+  | "reminders"
+  | "delete"
+  | "reset"
+  | "signout"
+  | null;
 
 /**
- * App shell for /app/*. Home renders the proof loop (world state from verified
- * bills, sweep, bill sheet, verification and share card). The other four tabs
- * keep their Run B placeholders. All sheets are portaled into the frame so they
+ * App shell for /app/*. The tab is driven by the route. Solar is behind
+ * VITE_FEATURE_SOLAR (off by default) so the tab bar shows four tabs and the
+ * Solar route is not reachable. Sheets are portaled into the app frame so they
  * stay inside the app column at >=900px.
  */
 export function AppShell() {
   const { t } = useTranslation();
-  const { profile } = useAuth();
-  const [tab, setTab] = useState<TabId>("home");
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { profile, signOut, saveProfile, deleteAccount, resetDemo } = useAuth();
+  const tab = tabFromPath(location.pathname);
+
   const [profileOpen, setProfileOpen] = useState(false);
   const [overlay, setOverlay] = useState<Overlay>(null);
+  const [missionId, setMissionId] = useState<string | null>(null);
+  const [cardId, setCardId] = useState<string | null>(null);
   const [sweepStartComplete, setSweepStartComplete] = useState(false);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [dashError, setDashError] = useState(false);
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [shareKwh, setShareKwh] = useState(0);
   const frameRef = useRef<HTMLDivElement>(null);
   const [frameEl, setFrameEl] = useState<HTMLDivElement | null>(null);
@@ -51,6 +71,13 @@ export function AppShell() {
   useEffect(() => {
     setFrameEl(frameRef.current);
   }, []);
+
+  // The Solar route is not reachable while the feature flag is off.
+  useEffect(() => {
+    if (!FEATURE_SOLAR && location.pathname.startsWith(TAB_PATHS.solar)) {
+      navigate(TAB_PATHS.home, { replace: true });
+    }
+  }, [location.pathname, navigate]);
 
   const refresh = useCallback(async () => {
     if (!profile) return;
@@ -66,22 +93,92 @@ export function AppShell() {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    if (!profile) return;
+    let active = true;
+    void (async () => {
+      const stored = await api.data.getSettings(profile.user);
+      if (active) setSettings(stored);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [profile]);
+
+  const saveSettings = useCallback(
+    async (next: Settings) => {
+      if (!profile) return;
+      setSettings(next);
+      await api.data.saveSettings(profile.user, next);
+    },
+    [profile],
+  );
+
   const bills = dashboard?.bills ?? [];
   const demo = dashboard?.demo ?? false;
   const missionDone = dashboard?.missionDone ?? false;
+  const missionsDone = dashboard?.missionsDone ?? [];
   const state = worldState(bills);
   const items = navItems(t);
+  const card = cardId ? (FACTS.find((fact) => fact.id === cardId) ?? null) : null;
 
-  const completeSweep = useCallback(async () => {
-    if (profile) await api.data.completeMission(profile.user);
-    await refresh();
-    setOverlay(null);
-  }, [profile, refresh]);
+  const goToTab = useCallback(
+    (id: TabId) => {
+      setOverlay(null);
+      navigate(TAB_PATHS[id]);
+    },
+    [navigate],
+  );
+
+  const completeMission = useCallback(
+    async (id: string) => {
+      if (!profile) return;
+      await api.data.completeMission(profile.user, id);
+      await refresh();
+      setOverlay(null);
+    },
+    [profile, refresh],
+  );
 
   const openShare = useCallback((kwh: number) => {
     setShareKwh(kwh);
     setOverlay("share");
   }, []);
+
+  const openFromProfile = useCallback(
+    (next: Overlay) => {
+      setProfileOpen(false);
+      if (next === "learn" || next === "clip") setCardId(null);
+      setOverlay(next);
+    },
+    [],
+  );
+
+  const toggleWifi = useCallback(
+    (value: boolean) => {
+      void saveSettings({ ...settings, wifiOnly: value });
+    },
+    [saveSettings, settings],
+  );
+
+  const toggleSavedNote = useCallback(
+    (id: string) => {
+      const savedNotes = settings.savedNotes.includes(id)
+        ? settings.savedNotes.filter((note) => note !== id)
+        : [...settings.savedNotes, id];
+      void saveSettings({ ...settings, savedNotes });
+    },
+    [saveSettings, settings],
+  );
+
+  const saveNest = useCallback(
+    async (answers: Pick<SetupAnswers, "homeType" | "people" | "city" | "appliances">) => {
+      if (!profile) return;
+      await saveProfile({ ...profile, answers: { ...profile.answers, ...answers } });
+      setOverlay(null);
+    },
+    [profile, saveProfile],
+  );
 
   const initials = (profile?.user.displayName ?? "S")
     .split(" ")
@@ -90,32 +187,10 @@ export function AppShell() {
     .slice(0, 2)
     .toUpperCase();
 
-  const placeholderKeys: Record<TabId, string> = {
-    home: "app.runBHome",
-    missions: "app.runBMissions",
-    learn: "app.runBLearn",
-    solar: "app.runBSolar",
-    me: "app.runBMe",
-  };
-
   const home = dashError ? (
-    <div className="page">
-      <div className="list-state">
-        <Icon name="bill" size={34} />
-        <strong>{t("home.loadError")}</strong>
-        <p>{t("home.loadErrorHint")}</p>
-        <button className="quiet-button" onClick={() => void refresh()}>
-          {t("home.retry")}
-        </button>
-      </div>
-    </div>
+    <TabError onRetry={() => void refresh()} />
   ) : !dashboard ? (
-    <div className="page">
-      <div className="loading-state">
-        <span className="spinner" />
-        <h2>{t("home.loading")}</h2>
-      </div>
-    </div>
+    <TabLoading label={t("app.tabsHome")} />
   ) : (
     <HomeTab
       state={state}
@@ -128,12 +203,79 @@ export function AppShell() {
         setOverlay("sweep");
       }}
       onOpenMission={() => {
+        setMissionId("standby_sweep");
         setSweepStartComplete(true);
         setOverlay("sweep");
       }}
       onResult={() => setOverlay("result")}
     />
   );
+
+  const tabBody = (() => {
+    if (tab === "home") return home;
+    if (dashError) return <TabError onRetry={() => void refresh()} />;
+    if (!dashboard) return <TabLoading label={t(`app.tabs${tab === "missions" ? "Missions" : tab === "learn" ? "Learn" : "Me"}`)} />;
+    if (tab === "missions") {
+      return (
+        <MissionsTab
+          missionsDone={missionsDone}
+          onStartSweep={() => {
+            setSweepStartComplete(false);
+            setOverlay("sweep");
+          }}
+          onOpenMission={(id) => {
+            setMissionId(id);
+            setOverlay("mission");
+          }}
+        />
+      );
+    }
+    if (tab === "learn") {
+      return (
+        <LearnTab
+          facts={FACTS}
+          savedNotes={settings.savedNotes}
+          onOpen={(id) => {
+            setCardId(id);
+            setOverlay("learn");
+          }}
+          onWatch={(id) => {
+            setCardId(id);
+            setOverlay("clip");
+          }}
+        />
+      );
+    }
+    if (tab === "me") {
+      return (
+        <MeTab
+          bills={bills}
+          demo={demo}
+          profile={profile}
+          onShare={() => openShare(verifiedTotals(bills).kwh)}
+          onOpenProfile={() => setProfileOpen(true)}
+          onAddAmount={() => setOverlay("bill")}
+        />
+      );
+    }
+    return (
+      <div className="page">
+        <div className="empty-state">
+          <Icon name="sun" size={40} />
+          <div>
+            <strong>{t("app.runBSolar")}</strong>
+            <span>{t("app.runBPlaceholder")}</span>
+          </div>
+        </div>
+      </div>
+    );
+  })();
+
+  const exitDemo = () => {
+    clearDemo();
+    resetApi();
+    navigate("/welcome", { replace: true });
+  };
 
   return (
     <div className="app-shell" data-app-frame ref={frameRef}>
@@ -146,7 +288,7 @@ export function AppShell() {
               type="button"
               className={tab === item.id ? "active" : ""}
               aria-current={tab === item.id ? "page" : undefined}
-              onClick={() => setTab(item.id)}
+              onClick={() => goToTab(item.id)}
             >
               <Icon name={item.icon} />
               <span>{item.label}</span>
@@ -177,19 +319,21 @@ export function AppShell() {
           </button>
         </header>
 
-        {tab === "home" ? (
-          home
-        ) : (
-          <div className="page">
-            <div className="empty-state">
-              <SparrowMascot pose="curious" size={70} />
-              <div>
-                <strong>{t(placeholderKeys[tab])}</strong>
-                <span>{t("app.runBPlaceholder")}</span>
-              </div>
-            </div>
+        {demo ? (
+          <div className="demo-banner" role="status">
+            <strong>{t("demo.banner")}</strong>
+            <span>
+              <button type="button" onClick={() => {
+                clearDemo();
+                resetApi();
+                navigate("/login", { replace: true, state: { mode: "signup" } });
+              }}>{t("demo.createNest")}</button>
+              <button type="button" onClick={exitDemo}>{t("demo.exit")}</button>
+            </span>
           </div>
-        )}
+        ) : null}
+
+        {tabBody}
       </main>
 
       <nav className="bottom-nav" data-app-tabbar aria-label={t("app.nestName")}>
@@ -199,7 +343,7 @@ export function AppShell() {
             type="button"
             className={tab === item.id ? "active" : ""}
             aria-current={tab === item.id ? "page" : undefined}
-            onClick={() => setTab(item.id)}
+            onClick={() => goToTab(item.id)}
           >
             <Icon name={item.icon} size={21} />
             <span>{item.label}</span>
@@ -208,33 +352,125 @@ export function AppShell() {
       </nav>
 
       <SheetPortalContext.Provider value={frameEl}>
-        <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} />
+        <ProfileSheet
+          open={profileOpen}
+          onClose={() => setProfileOpen(false)}
+          wifiOnly={settings.wifiOnly}
+          onToggleWifi={toggleWifi}
+          onNest={() => openFromProfile("nest")}
+          onBills={() => openFromProfile("bills")}
+          onReminders={() => openFromProfile("reminders")}
+          onStory={() => {
+            setProfileOpen(false);
+            navigate("/app/story");
+          }}
+          onDelete={() => openFromProfile("delete")}
+          onSignOut={() => openFromProfile("signout")}
+          demo={demo}
+        />
+
         <SweepSheet
           open={overlay === "sweep"}
           onClose={() => setOverlay(null)}
           startComplete={sweepStartComplete}
-          onDone={completeSweep}
+          onDone={() => completeMission("standby_sweep")}
         />
+
+        <MissionDetailSheet
+          open={overlay === "mission" && missionId !== null}
+          missionId={missionId ?? "standby_sweep"}
+          done={missionId !== null && missionsDone.includes(missionId)}
+          onDone={() => void completeMission(missionId ?? "standby_sweep")}
+          onClose={() => setOverlay(null)}
+        />
+
+        <LearnDetailSheet
+          open={overlay === "learn"}
+          card={card}
+          saved={cardId !== null && settings.savedNotes.includes(cardId)}
+          onSave={() => cardId && toggleSavedNote(cardId)}
+          onWatch={() => setOverlay("clip")}
+          onClose={() => setOverlay(null)}
+        />
+
+        <ClipSheet open={overlay === "clip"} card={card} clipUrl={LEARN_CLIP_URL} onClose={() => setOverlay(null)} />
+
+        <NestSheet
+          open={overlay === "nest"}
+          profile={profile}
+          onSave={saveNest}
+          onClose={() => setOverlay(null)}
+        />
+
+        <BillsSheet
+          open={overlay === "bills"}
+          bills={bills}
+          demo={demo}
+          error={dashError}
+          onRetry={() => void refresh()}
+          onAdd={() => setOverlay("bill")}
+          onShare={openShare}
+          onClose={() => setOverlay(null)}
+        />
+
+        <RemindersSheet
+          open={overlay === "reminders"}
+          settings={settings}
+          onSave={async (next) => saveSettings(next)}
+          onClose={() => setOverlay(null)}
+        />
+
+        <ConfirmSheet
+          open={overlay === "delete" || overlay === "signout"}
+          kind={overlay === "delete" ? (demo ? "reset" : "delete") : "signout"}
+          onBack={() => setOverlay(null)}
+          onConfirm={() => {
+            if (overlay === "delete" && demo) {
+              void resetDemo();
+              setOverlay(null);
+            } else if (overlay === "delete") {
+              void (async () => {
+                const result = await deleteAccount();
+                navigate("/removed", { replace: true, state: { accountFailed: result === "accountFailed" } });
+              })();
+            } else {
+              void (async () => {
+                if (demo) exitDemo();
+                else {
+                  await signOut();
+                  navigate("/login", { replace: true });
+                }
+              })();
+            }
+          }}
+        />
+
         <BillSheet
           open={overlay === "bill"}
           onClose={() => setOverlay(null)}
           demo={demo}
-          previousBill={bills[0] ?? null}
+          wifiOnly={settings.wifiOnly}
           onSaved={refresh}
           onShare={openShare}
         />
+
         <ResultSheet
           open={overlay === "result"}
           onClose={() => setOverlay(null)}
           bills={bills}
           demo={demo}
           onShare={openShare}
+          onAddAmount={() => setOverlay("bill")}
         />
+
         <ShareSheet
           open={overlay === "share"}
           onClose={() => setOverlay(null)}
           kwh={shareKwh}
           demo={demo}
+          baselineUnits={bills[1]?.units ?? null}
+          baselineAmount={bills[1]?.amount ?? null}
+          onAddBill={() => setOverlay("bill")}
         />
       </SheetPortalContext.Provider>
     </div>

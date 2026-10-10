@@ -4,11 +4,24 @@ import { Button } from "../components/ui/Button";
 import { SparrowLogo } from "../components/SparrowLogo";
 import { Icon } from "../components/Icon";
 import { WelcomeScene } from "../components/scenes/Scenes";
-import { requestDemo } from "../lib/demo";
+import { notifyDemoStarted, seedDemo } from "../lib/demo";
+import { resetApi } from "../lib/api";
 
 export function WelcomeScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  /**
+   * Demo leaves the real stack behind: resetApi() swaps in the local mock
+   * providers (see src/lib/api/index.ts) so a demo session, even in a
+   * real-mode build, is fully local and makes zero network calls.
+   */
+  const startDemo = () => {
+    seedDemo();
+    resetApi();
+    notifyDemoStarted();
+    navigate("/app", { replace: true });
+  };
   return (
     <main className="landing">
       <header>
@@ -37,7 +50,7 @@ export function WelcomeScreen() {
           <Button icon="arrow" onClick={() => navigate("/login")}>
             {t("welcome.build")}
           </Button>
-          <Button variant="quiet" onClick={() => { requestDemo(); navigate("/login"); }}>
+          <Button variant="quiet" onClick={startDemo}>
             {t("welcome.trySample")}
           </Button>
         </div>
@@ -51,4 +64,3 @@ export function WelcomeScreen() {
     </main>
   );
 }
-

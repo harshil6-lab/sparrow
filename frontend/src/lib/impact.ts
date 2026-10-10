@@ -49,6 +49,39 @@ export function co2Kg(kwhSaved: number, factor: number | null): number {
 }
 
 /**
+ * kWh saved -> rupees kept, using the user's OWN average rate taken from the
+ * baseline bill: baseline_amount / baseline_units. Returns null when the baseline
+ * bill has no amount, so the UI prompts for it instead of inventing a tariff.
+ * Mirrors backend/impact.py `rupees_saved`.
+ */
+export function rupeesSaved(
+  kwhSaved: number,
+  baselineAmount: number | null | undefined,
+  baselineUnits: number,
+): number | null {
+  if (baselineAmount === null || baselineAmount === undefined) return null;
+  if (!(baselineUnits > 0)) return null;
+  if (kwhSaved < 0) throw new Error("kwh_saved must be >= 0");
+  return kwhSaved * (baselineAmount / baselineUnits);
+}
+
+/** kWh for display: one decimal (integers stay whole). */
+export function formatKwhForDisplay(kwhSaved: number): string {
+  const rounded = Math.round(kwhSaved * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+/** CO2 for display: whole kg, or one decimal below 10 kg. */
+export function formatCo2KgForDisplay(kg: number): string {
+  return kg < 10 ? (Math.round(kg * 10) / 10).toFixed(1) : String(Math.round(kg));
+}
+
+/** Rupees for display: nearest whole rupee, grouped for Indian reading. */
+export function formatRupeesForDisplay(inr: number): string {
+  return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Math.round(inr));
+}
+
+/**
  * A projection, not a measurement. Label it as such in the UI.
  * Mirrors backend/impact.py `scale_projection`.
  */

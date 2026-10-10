@@ -1,0 +1,53 @@
+{
+  "_schema": "Learn cards. Structure only: every visible string is an i18n key under learn.<id>.* (see frontend/src/i18n/locales). effect.value stays null until a real source is cited. A card with source=null shows a 'source pending' chip and no link, and its copy must not carry numeric savings claims (percentages, kWh or rupee amounts). clip=null means the clip sheet shows 'Coming soon'.",
+  "cards": [
+    {
+      "id": "ac_setpoint",
+      "icon": "ac",
+      "effect": { "kind": "percent_of_ac_units", "value": null },
+      "source": null,
+      "clip": null,
+      "verified": false
+    },
+    {
+      "id": "standby_power",
+      "icon": "bolt",
+      "effect": { "kind": "watts_standby", "value": null },
+      "source": null,
+      "clip": null,
+      "verified": false
+    },
+    {
+      "id": "led_swap",
+      "icon": "bulb",
+      "effect": { "kind": "watts_saved_per_bulb", "value": null },
+      "source": null,
+      "clip": null,
+      "verified": false
+    },
+    {
+      "id": "fridge_door",
+      "icon": "fridge",
+      "effect": { "kind": "compressor_cycles", "value": null },
+      "source": null,
+      "clip": null,
+      "verified": false
+    },
+    {
+      "id": "geyser_use",
+      "icon": "geyser",
+      "effect": { "kind": "litres_heated", "value": null },
+      "source": null,
+      "clip": null,
+      "verified": false
+    },
+    {
+      "id": "daylight_curtains",
+      "icon": "sun",
+      "effect": { "kind": "daylight_hours", "value": null },
+      "source": null,
+      "clip": null,
+      "verified": false
+    }
+  ]
+}

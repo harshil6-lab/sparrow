@@ -1,11 +1,12 @@
 import { Navigate, Route, Routes, useLocation, type RouteProps } from "react-router-dom";
-import { useAuth } from "./lib/AuthProvider";
+import { useSession, useAuth } from "./lib/AuthProvider";
 import { SplashScreen } from "./screens/SplashScreen";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
 import { LoginScreen } from "./screens/LoginScreen";
 import { StoryScreen } from "./screens/StoryScreen";
 import { SetupScreen } from "./screens/SetupScreen";
 import { ReadyScreen } from "./screens/ReadyScreen";
+import { RemovedScreen } from "./screens/RemovedScreen";
 import { AppShell } from "./screens/app/AppShell";
 
 function Loading() {
@@ -21,9 +22,10 @@ export function RequireProfile({
   requireSetup?: boolean;
 }) {
   const { ready, profile } = useAuth();
+  const { kind } = useSession();
   const location = useLocation();
   if (!ready) return <Loading />;
-  if (!profile) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  if (!profile || kind === "none") return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   if (requireSetup && !profile.setupComplete) return <Navigate to="/setup" replace />;
   return <>{children}</>;
 }
@@ -64,6 +66,7 @@ export const routeTable: RouteProps[] = [
       </RequireProfile>
     ),
   },
+  { path: "/removed", element: <RemovedScreen /> },
   {
     path: "/app/*",
     element: (

@@ -24,6 +24,7 @@
     "@fontsource/noto-sans-malayalam": "^5.1.0",
     "@fontsource/noto-sans-tamil": "^5.1.0",
     "@fontsource/noto-sans-telugu": "^5.1.0",
+    "aws-amplify": "^6.22.1",
     "i18next": "^23.16.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

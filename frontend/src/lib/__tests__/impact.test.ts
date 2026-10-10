@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { co2Kg, missionResult, scaleProjection } from "../impact";
+import {
+  co2Kg,
+  formatCo2KgForDisplay,
+  formatKwhForDisplay,
+  formatRupeesForDisplay,
+  missionResult,
+  rupeesSaved,
+  scaleProjection,
+} from "../impact";
 
 /**
  * Parity cases mirroring backend/tests/test_impact.py so the client and the
@@ -39,5 +47,28 @@ describe("impact.ts (parity with backend/impact.py)", () => {
 
   it("scales a clearly-labelled projection", () => {
     expect(scaleProjection(30, 10)).toBe(300);
+  });
+
+  it("computes rupees from the user's own baseline bill", () => {
+    expect(rupeesSaved(30, 1500, 200)).toBe(225);
+  });
+
+  it("returns null rupees when the baseline bill has no amount", () => {
+    expect(rupeesSaved(30, null, 200)).toBeNull();
+    expect(rupeesSaved(30, undefined, 200)).toBeNull();
+    expect(rupeesSaved(30, 1500, 0)).toBeNull();
+  });
+
+  it("rejects negative kWh saved for rupees too", () => {
+    expect(() => rupeesSaved(-1, 1500, 200)).toThrow();
+  });
+
+  it("formats figures for display (kWh 1dp, CO2 whole or 1dp under 10, rupees whole)", () => {
+    expect(formatKwhForDisplay(30)).toBe("30");
+    expect(formatKwhForDisplay(29.6)).toBe("29.6");
+    expect(formatCo2KgForDisplay(21.3)).toBe("21");
+    expect(formatCo2KgForDisplay(0.71)).toBe("0.7");
+    expect(formatRupeesForDisplay(225)).toBe("225");
+    expect(formatRupeesForDisplay(1500)).toBe("1,500");
   });
 });

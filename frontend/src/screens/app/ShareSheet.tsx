@@ -5,7 +5,15 @@ import { SparrowLogo } from "../../components/SparrowLogo";
 import { SparrowMascot } from "../../components/SparrowMascot";
 import { Sample } from "../../components/ui/Sample";
 import { Sheet } from "../../components/ui/Sheet";
+import { SourceSheet } from "../../components/ui/SourceSheet";
 import { useAuth } from "../../lib/AuthProvider";
+import {
+  co2Kg,
+  formatCo2KgForDisplay,
+  formatRupeesForDisplay,
+  rupeesSaved,
+} from "../../lib/impact";
+import { emissionFactor, hasEmissionFactor } from "../../lib/config";
 
 type Status = "idle" | "shared" | "copied" | "error";
 
@@ -23,15 +31,24 @@ export function ShareSheet({
   onClose,
   kwh,
   demo,
+  baselineUnits,
+  baselineAmount,
+  onAddBill,
 }: {
   open: boolean;
   onClose: () => void;
   kwh: number;
   demo: boolean;
+  /** Baseline bill, for the user's own rupee rate. Null when there is none. */
+  baselineUnits: number | null;
+  baselineAmount: number | null;
+  /** Opens the bill sheet so the baseline amount can be added. */
+  onAddBill: () => void;
 }) {
   const { t } = useTranslation();
   const { profile } = useAuth();
   const [status, setStatus] = useState<Status>("idle");
+  const [sourceOpen, setSourceOpen] = useState(false);
 
   useEffect(() => {
     if (open) setStatus("idle");
@@ -39,6 +56,9 @@ export function ShareSheet({
 
   const name = (profile?.user.displayName ?? "S").split(" ")[0].toUpperCase();
   const figure = formatKwh(kwh);
+  const factor = emissionFactor();
+  const co2 = hasEmissionFactor && factor !== null ? co2Kg(kwh, factor) : null;
+  const rupees = rupeesSaved(kwh, baselineAmount, baselineUnits ?? 0);
 
   const share = async () => {
     const text = t("share.shareText", { kwh: figure });
@@ -75,6 +95,28 @@ export function ShareSheet({
         <span>{t("share.kicker", { name })}</span>
         <h2>{t("share.kwh", { kwh: figure })}</h2>
         {demo ? <Sample /> : null}
+        <div className="share-figures">
+          {co2 !== null ? (
+            <span className="source-figure">
+              {demo ? <Sample /> : null}
+              <span>{t("common.co2Figure", { kg: formatCo2KgForDisplay(co2) })}</span>
+              <button type="button" className="source-button" onClick={() => setSourceOpen(true)}>
+                {t("common.source")}
+              </button>
+            </span>
+          ) : null}
+          {rupees !== null ? (
+            <span className="source-figure">
+              {demo ? <Sample /> : null}
+              <span>{t("common.rupeesFigure", { amount: formatRupeesForDisplay(rupees) })}</span>
+              <span className="figure-note">{t("common.atYourRate")}</span>
+            </span>
+          ) : (
+            <button type="button" className="text-button" onClick={onAddBill}>
+              {t("common.addAmount")}
+            </button>
+          )}
+        </div>
         <p>{t("share.tagline")}</p>
         <small>{t("share.footline")}</small>
       </div>
@@ -88,6 +130,7 @@ export function ShareSheet({
               ? t("share.copyFailed")
               : t("share.share")}
       </button>
+      <SourceSheet open={sourceOpen} onClose={() => setSourceOpen(false)} />
     </Sheet>
   );
 }

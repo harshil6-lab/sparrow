@@ -1,10 +1,20 @@
+import { useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../../components/Icon";
 import { SparrowMascot, type SparrowPose } from "../../components/SparrowMascot";
 import { NeighbourhoodScene } from "../../components/scenes/NeighbourhoodScene";
 import { Sample } from "../../components/ui/Sample";
+import { SourceSheet } from "../../components/ui/SourceSheet";
 import type { Bill } from "../../lib/api/data";
-import { missionResult } from "../../lib/impact";
+import {
+  co2Kg,
+  formatCo2KgForDisplay,
+  formatKwhForDisplay,
+  formatRupeesForDisplay,
+  missionResult,
+  rupeesSaved,
+} from "../../lib/impact";
+import { emissionFactor, hasEmissionFactor } from "../../lib/config";
 import type { WorldState } from "../../lib/world";
 
 /** Card-1 headline per world state. The scene, the pose and this label all
@@ -49,11 +59,25 @@ export function HomeTab({
   onResult: () => void;
 }) {
   const { t } = useTranslation();
+  const [sourceOpen, setSourceOpen] = useState(false);
   const latest = bills[0];
   const previous = bills[1];
   const result = latest && previous ? missionResult(previous.units, latest.units) : null;
   const verified = result?.verified ?? false;
   const savedKwh = result?.kwhSaved ?? 0;
+  const factor = emissionFactor();
+  const co2 = verified && hasEmissionFactor && factor !== null ? co2Kg(savedKwh, factor) : null;
+  const rupees = verified ? rupeesSaved(savedKwh, previous?.amount ?? null, previous?.units ?? 0) : null;
+  const kwhText = formatKwhForDisplay(savedKwh);
+
+  /** Enter/Space on the in-card "Source" span, without triggering the card. */
+  const activateSource = (event: KeyboardEvent<HTMLSpanElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      event.stopPropagation();
+      setSourceOpen(true);
+    }
+  };
 
   return (
     <div className="page home-page">
@@ -111,22 +135,48 @@ export function HomeTab({
           <span>{t("home.card3Label")}</span>
           <strong>
             {verified
-              ? t("home.card3Saved", { kwh: savedKwh })
+              ? t("home.card3Saved", { kwh: kwhText })
               : missionDone
                 ? t("home.card3Done")
                 : t("home.card3None")}
           </strong>
           <small>
-            {verified ? (
-              <>
-                {demo ? <Sample /> : null} {t("common.sourcePending")}
-              </>
+            {verified && co2 !== null ? (
+              <span className="source-figure">
+                {demo ? <Sample /> : null}
+                <span>{t("common.co2Figure", { kg: formatCo2KgForDisplay(co2) })}</span>
+                <span
+                  className="source-button"
+                  role="button"
+                  tabIndex={0}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setSourceOpen(true);
+                  }}
+                  onKeyDown={activateSource}
+                >
+                  {t("common.source")}
+                </span>
+              </span>
             ) : missionDone ? (
               t("home.card3DoneHint")
             ) : (
               t("home.card3Hint")
             )}
           </small>
+          {verified ? (
+            <small>
+              {rupees !== null ? (
+                <span className="source-figure">
+                  {demo ? <Sample /> : null}
+                  <span>{t("common.rupeesFigure", { amount: formatRupeesForDisplay(rupees) })}</span>
+                  <span className="figure-note">{t("common.atYourRate")}</span>
+                </span>
+              ) : (
+                <span>{t("common.addAmount")}</span>
+              )}
+            </small>
+          ) : null}
         </button>
       </section>
 
@@ -142,6 +192,7 @@ export function HomeTab({
           {verified ? t("home.viewResult") : t("home.enterBill")} <Icon name="arrow" size={18} />
         </button>
       </section>
+      <SourceSheet open={sourceOpen} onClose={() => setSourceOpen(false)} />
     </div>
   );
 }
