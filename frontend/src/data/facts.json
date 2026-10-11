@@ -1,53 +1,121 @@
 {
-  "_schema": "Learn cards. Structure only: every visible string is an i18n key under learn.<id>.* (see frontend/src/i18n/locales). effect.value stays null until a real source is cited. A card with source=null shows a 'source pending' chip and no link, and its copy must not carry numeric savings claims (percentages, kWh or rupee amounts). clip=null means the clip sheet shows 'Coming soon'.",
+  "_schema": "Learn cards. Copy fields are i18n keys; source metadata stays in English and is shown verbatim.",
   "cards": [
     {
       "id": "ac_setpoint",
       "icon": "ac",
-      "effect": { "kind": "percent_of_ac_units", "value": null },
-      "source": null,
-      "clip": null,
-      "verified": false
+      "habit": "learn.ac_setpoint.habit",
+      "better_habit": "learn.ac_setpoint.better",
+      "why": "learn.ac_setpoint.why",
+      "sources": [
+        {
+          "publisher": "Lok Sabha, Ministry of Power",
+          "title": "Lok Sabha Unstarred Question No. 2613 (27.12.2018)",
+          "url": "https://eparlib.nic.in/bitstream/123456789/803193/1/AU2613.pdf",
+          "accessed": "2026-10-11"
+        },
+        {
+          "publisher": "Bureau of Energy Efficiency",
+          "title": "BEE guidance on energy-efficient air-conditioning",
+          "url": "https://beeindia.gov.in/WriteReadData/L45218/1735192050.pdf",
+          "accessed": "2026-10-11"
+        }
+      ],
+      "claims": [
+        {
+          "text": "learn.ac_setpoint.claim",
+          "kind": "estimate",
+          "value": 6
+        }
+      ],
+      "clip": null
     },
     {
       "id": "standby_power",
       "icon": "bolt",
-      "effect": { "kind": "watts_standby", "value": null },
-      "source": null,
-      "clip": null,
-      "verified": false
+      "habit": "learn.standby_power.habit",
+      "better_habit": "learn.standby_power.better",
+      "why": "learn.standby_power.why",
+      "sources": [
+        {
+          "publisher": "Electricity Department, Puducherry",
+          "title": "Energy Conservation",
+          "url": "https://electricity.py.gov.in/energy-conservation",
+          "accessed": "2026-10-11"
+        }
+      ],
+      "clip": null
     },
     {
       "id": "led_swap",
       "icon": "bulb",
-      "effect": { "kind": "watts_saved_per_bulb", "value": null },
-      "source": null,
-      "clip": null,
-      "verified": false
+      "habit": "learn.led_swap.habit",
+      "better_habit": "learn.led_swap.better",
+      "why": "learn.led_swap.why",
+      "sources": [
+        {
+          "publisher": "Press Information Bureau, Government of India",
+          "title": "PIB UJALA factsheet",
+          "url": "https://static.pib.gov.in/WriteReadData/specificdocs/documents/2023/jan/doc202316150401.pdf",
+          "accessed": "2026-10-11"
+        }
+      ],
+      "claims": [
+        {
+          "text": "learn.led_swap.claim",
+          "kind": "fact",
+          "value": 90
+        }
+      ],
+      "clip": null
     },
     {
       "id": "fridge_door",
       "icon": "fridge",
-      "effect": { "kind": "compressor_cycles", "value": null },
-      "source": null,
-      "clip": null,
-      "verified": false
+      "habit": "learn.fridge_door.habit",
+      "better_habit": "learn.fridge_door.better",
+      "why": "learn.fridge_door.why",
+      "sources": [
+        {
+          "publisher": "Electricity Department, Puducherry",
+          "title": "Energy Conservation",
+          "url": "https://electricity.py.gov.in/energy-conservation",
+          "accessed": "2026-10-11"
+        }
+      ],
+      "clip": null
     },
     {
       "id": "geyser_use",
       "icon": "geyser",
-      "effect": { "kind": "litres_heated", "value": null },
-      "source": null,
-      "clip": null,
-      "verified": false
+      "habit": "learn.geyser_use.habit",
+      "better_habit": "learn.geyser_use.better",
+      "why": "learn.geyser_use.why",
+      "sources": [
+        {
+          "publisher": "Electricity Department, Puducherry",
+          "title": "Energy Conservation",
+          "url": "https://electricity.py.gov.in/energy-conservation",
+          "accessed": "2026-10-11"
+        }
+      ],
+      "clip": null
     },
     {
       "id": "daylight_curtains",
       "icon": "sun",
-      "effect": { "kind": "daylight_hours", "value": null },
-      "source": null,
-      "clip": null,
-      "verified": false
+      "habit": "learn.daylight_curtains.habit",
+      "better_habit": "learn.daylight_curtains.better",
+      "why": "learn.daylight_curtains.why",
+      "sources": [
+        {
+          "publisher": "Electricity Department, Puducherry",
+          "title": "Energy Conservation",
+          "url": "https://electricity.py.gov.in/energy-conservation",
+          "accessed": "2026-10-11"
+        }
+      ],
+      "clip": null
     }
   ]
 }

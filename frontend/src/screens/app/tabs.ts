@@ -2,12 +2,13 @@ import type { TFunction } from "i18next";
 import type { IconName } from "../../components/Icon";
 import { FEATURE_SOLAR } from "../../lib/env";
 
-export type TabId = "home" | "missions" | "learn" | "solar" | "me";
+export type TabId = "home" | "missions" | "learn" | "community" | "solar" | "me";
 
 export const TAB_PATHS: Record<TabId, string> = {
   home: "/app",
   missions: "/app/missions",
   learn: "/app/learn",
+  community: "/app/community",
   solar: "/app/solar",
   me: "/app/me",
 };
@@ -16,6 +17,7 @@ export const TAB_PATHS: Record<TabId, string> = {
 export function tabFromPath(pathname: string): TabId {
   if (pathname.startsWith("/app/missions")) return "missions";
   if (pathname.startsWith("/app/learn")) return "learn";
+  if (pathname.startsWith("/app/community")) return "community";
   if (pathname.startsWith("/app/me")) return "me";
   if (pathname.startsWith("/app/solar")) return FEATURE_SOLAR ? "solar" : "home";
   return "home";
@@ -27,6 +29,7 @@ export function navItems(t: TFunction): { id: TabId; label: string; icon: IconNa
     { id: "home", label: t("app.tabsHome"), icon: "home" },
     { id: "missions", label: t("app.tabsMissions"), icon: "bolt" },
     { id: "learn", label: t("app.tabsLearn"), icon: "book" },
+    { id: "community", label: t("app.tabsCommunity"), icon: "people2" },
     { id: "solar", label: t("app.tabsSolar"), icon: "sun" },
     { id: "me", label: t("app.tabsMe"), icon: "user" },
   ];

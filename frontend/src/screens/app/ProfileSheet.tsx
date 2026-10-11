@@ -5,11 +5,12 @@ import { LanguageList } from "../../components/ui/LanguageList";
 import { Icon } from "../../components/Icon";
 import { useAuth } from "../../lib/AuthProvider";
 import { useLanguage } from "../../lib/LanguageProvider";
+import { languageMeta } from "../../i18n/languages";
 
 /**
  * Profile & settings, opened from every tab's avatar and the Me gear.
  * Rows and their icons come from the Figma export's ProfileMenu: My Nest,
- * Language, Watch the story again, Bills, Reminders, the Wi-Fi toggle, Delete
+ * Language, Watch the story again, Bills, the Wi-Fi toggle, Delete
  * my data and Sign out. Every row opens a working screen or sheet.
  */
 export function ProfileSheet({
@@ -19,7 +20,6 @@ export function ProfileSheet({
   onToggleWifi,
   onNest,
   onBills,
-  onReminders,
   onStory,
   onDelete,
   onSignOut,
@@ -31,14 +31,13 @@ export function ProfileSheet({
   onToggleWifi: (value: boolean) => void;
   onNest: () => void;
   onBills: () => void;
-  onReminders: () => void;
   onStory: () => void;
   onDelete: () => void;
   onSignOut: () => void;
   demo: boolean;
 }) {
   const { t } = useTranslation();
-  const { profile } = useAuth();
+  const { profile, saveProfile } = useAuth();
   const { language, setLanguage, isBeta } = useLanguage();
   const [langOpen, setLangOpen] = useState(false);
 
@@ -57,6 +56,18 @@ export function ProfileSheet({
 
   const rows: { key: string; icon: Parameters<typeof Icon>[0]["name"]; label: string; copy: string; action: () => void }[] = [
     {
+      key: "displayName",
+      icon: "user",
+      label: t("profile.rowDisplayName"),
+      copy: profile?.displayName || t("profile.rowDisplayNameCopy"),
+      action: () => {
+        if (!profile || demo) return;
+        const next = window.prompt(t("profile.displayNamePrompt"), profile.displayName ?? "")?.trim();
+        if (!next || next.length < 2 || next.length > 40 || !/^[\p{L}\p{N} .\-_']+$/u.test(next)) return;
+        void saveProfile({ ...profile, displayName: next });
+      },
+    },
+    {
       key: "nest",
       icon: "home",
       label: t("profile.rowNest"),
@@ -67,7 +78,7 @@ export function ProfileSheet({
       key: "language",
       icon: "language",
       label: t("profile.rowLanguage"),
-      copy: `${language.toUpperCase()}${isBeta ? ` \u00b7 ${t("common.betaTag")}` : ""}`,
+      copy: `${languageMeta(language).native}${isBeta ? ` \u00b7 ${t("common.betaTag")}` : ""}`,
       action: () => setLangOpen(true),
     },
     {
@@ -84,14 +95,12 @@ export function ProfileSheet({
       copy: t("profile.rowBillsCopy"),
       action: onBills,
     },
-    {
-      key: "reminders",
-      icon: "bell",
-      label: t("profile.rowReminders"),
-      copy: t("profile.rowRemindersCopy"),
-      action: onReminders,
-    },
   ];
+
+  const changeLanguage = (code: Parameters<typeof setLanguage>[0]) => {
+    setLanguage(code);
+    if (profile && !demo) void saveProfile({ ...profile, language: code });
+  };
 
   return (
     <>
@@ -102,11 +111,13 @@ export function ProfileSheet({
         sheetClassName="settings-sheet"
         closeLabel={t("profile.close")}
       >
-        <div className="sheet-head">
+        <div className="sheet-head profile-sheet-head">
           <div>
-            <span>{profile?.user.displayName ?? t("app.nestName")}</span>
+            <span>{demo ? t("profile.demoName") : profile?.user.displayName ?? t("app.nestName")}</span>
             <h2>{t("profile.title")}</h2>
+            <small>{t("profile.signedInAs", { email: demo ? t("profile.demoName") : profile?.user.email ?? "" })}</small>
           </div>
+          <button type="button" aria-label={t("profile.close")} onClick={onClose}><Icon name="close" /></button>
         </div>
         {rows.map((row) => (
           <button key={row.key} type="button" aria-label={row.label} onClick={row.action}>
@@ -145,7 +156,7 @@ export function ProfileSheet({
           <Icon name="arrow" />
         </button>
       </Sheet>
-      <LanguageList open={langOpen} value={language} onChange={setLanguage} onClose={() => setLangOpen(false)} />
+      <LanguageList open={langOpen} value={language} onChange={changeLanguage} onClose={() => setLangOpen(false)} />
     </>
   );
 }

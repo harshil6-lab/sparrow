@@ -12,12 +12,13 @@ describe("tab routing and the Solar flag", () => {
     expect(tabFromPath("/app")).toBe("home");
     expect(tabFromPath("/app/missions")).toBe("missions");
     expect(tabFromPath("/app/learn")).toBe("learn");
+    expect(tabFromPath("/app/community")).toBe("community");
     expect(tabFromPath("/app/me")).toBe("me");
   });
 
   it("never resolves the Solar route while the flag is off", () => {
     expect(FEATURE_SOLAR).toBe(false);
     expect(tabFromPath(TAB_PATHS.solar)).toBe("home");
-    expect(navItems(i18n.t).map((item) => item.id)).toEqual(["home", "missions", "learn", "me"]);
+    expect(navItems(i18n.t).map((item) => item.id)).toEqual(["home", "missions", "learn", "community", "me"]);
   });
 });

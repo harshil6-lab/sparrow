@@ -74,3 +74,12 @@ export function buildBillPayload(month: string, units: number, amount?: number |
 export function currentMonthKey(now: Date = new Date()): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
+
+export function previousMonthKey(month: string): string {
+  const [year, value] = month.split("-").map(Number);
+  return value === 1 ? `${year - 1}-12` : `${year}-${String(value - 1).padStart(2, "0")}`;
+}
+
+export function isPlausibilityWarning(previousUnits: number, nextUnits: number): boolean {
+  return nextUnits > previousUnits * 3 || nextUnits < previousUnits / 3;
+}

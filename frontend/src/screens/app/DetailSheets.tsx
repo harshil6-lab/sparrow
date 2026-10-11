@@ -3,7 +3,7 @@ import { Icon } from "../../components/Icon";
 import { SparrowMascot } from "../../components/SparrowMascot";
 import { Sheet } from "../../components/ui/Sheet";
 import type { FactCard } from "../../lib/learn";
-import { visibleNote } from "../../lib/learn";
+import { FACTS, hasCitableSource, visibleNote } from "../../lib/learn";
 
 /**
  * Mission detail sheet, reused from the Figma export's DetailSheet:
@@ -24,6 +24,7 @@ export function MissionDetailSheet({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const coolingCard = missionId === "ac" ? FACTS.find((card) => card.id === "ac_setpoint") : null;
   return (
     <Sheet
       open={open}
@@ -40,16 +41,29 @@ export function MissionDetailSheet({
           <Icon name="check" />
           <span>
             <strong>{t("missions.whatToDo")}</strong>
-            <small>{t(`missions.${missionId}.what`)}</small>
+            <small>{coolingCard ? t(coolingCard.better_habit) : t(`missions.${missionId}.what`)}</small>
           </span>
         </div>
         <div>
           <Icon name="leaf" />
           <span>
             <strong>{t("missions.whyItHelps")}</strong>
-            <small>{t(`missions.${missionId}.why`)}</small>
+            <small>{coolingCard ? t(coolingCard.why) : t(`missions.${missionId}.why`)}</small>
           </span>
         </div>
+        {coolingCard?.sources.map((source) => (
+          <div key={source.url}>
+            <Icon name="book" />
+            <span>
+              <strong>{t("learn.sourceLabel")}</strong>
+              <small>
+                <a href={source.url} target="_blank" rel="noopener noreferrer">
+                  {source.publisher}: {source.title}
+                </a>
+              </small>
+            </span>
+          </div>
+        ))}
         <div>
           <Icon name="clock" />
           <span>
@@ -86,7 +100,8 @@ export function LearnDetailSheet({
 }) {
   const { t } = useTranslation();
   if (!card) return null;
-  const why = visibleNote(t(`learn.${card.id}.why`), card.source);
+  const hasSource = hasCitableSource(card);
+  const why = visibleNote(t(card.why), hasSource);
   const sourceText = t("common.sourcePending");
   return (
     <Sheet
@@ -104,14 +119,14 @@ export function LearnDetailSheet({
           <Icon name="bulb" />
           <span>
             <strong>{t("learn.habit")}</strong>
-            <small>{t(`learn.${card.id}.habit`)}</small>
+            <small>{t(card.habit)}</small>
           </span>
         </div>
         <div>
           <Icon name="leaf" />
           <span>
             <strong>{t("learn.betterHabit")}</strong>
-            <small>{t(`learn.${card.id}.better`)}</small>
+            <small>{t(card.better_habit)}</small>
           </span>
         </div>
         {why ? (
@@ -123,15 +138,36 @@ export function LearnDetailSheet({
             </span>
           </div>
         ) : null}
+        {hasSource ? card.claims?.map((claim) => (
+          <div key={claim.text}>
+            <Icon name="check" />
+            <span>
+              <strong>
+                <span className={claim.kind === "estimate" ? "source-chip" : undefined}>
+                  {claim.kind === "estimate" ? t("learn.estimate") : t("learn.fact")}
+                </span>
+              </strong>
+              <small>{t(claim.text)}</small>
+            </span>
+          </div>
+        )) : null}
         <div>
           <Icon name="check" />
           <span>
             <strong>{t("learn.sourceLabel")}</strong>
-            {card.source ? (
-              <small>
-                <a className="source-url-value" href={card.source} target="_blank" rel="noreferrer">
-                  {card.source}
-                </a>
+            {hasSource ? (
+              <small className="source-list">
+                {card.sources.map((source) => (
+                  <a
+                    key={source.url}
+                    className="source-url-value"
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {source.publisher}: {source.title}
+                  </a>
+                ))}
               </small>
             ) : (
               <small>
@@ -161,11 +197,13 @@ export function ClipSheet({
   open,
   card,
   clipUrl,
+  wifiOnly,
   onClose,
 }: {
   open: boolean;
   card: FactCard | null;
   clipUrl: string;
+  wifiOnly: boolean;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -181,7 +219,18 @@ export function ClipSheet({
       {clipUrl ? (
         <>
           <div className="clip-stage">
-            <video className="story-video" src={clipUrl} controls playsInline />
+            <video
+              className="story-video"
+              src={clipUrl}
+              controls
+              playsInline
+              onPlay={(event) => {
+                const connection = (navigator as Navigator & { connection?: { type?: string } }).connection;
+                if (wifiOnly && connection?.type === "cellular" && !window.confirm(t("profile.wifiConfirm"))) {
+                  event.currentTarget.pause();
+                }
+              }}
+            />
           </div>
           <h2>{t(`learn.${card.id}.category`)}</h2>
           <p className="clip-caption">{t("learn.clipCaption")}</p>

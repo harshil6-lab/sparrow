@@ -2,11 +2,23 @@
 import json
 from pathlib import Path
 
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "data" / "config.json"
+_HERE = Path(__file__).resolve().parent
+
+
+def config_path():
+    """Where data/config.json lives.
+
+    The Lambda bundle ships its own copy at backend/data/config.json; in a
+    checkout the sourced file stays at the repo's data/config.json.
+    """
+    bundled = _HERE / "data" / "config.json"
+    if bundled.exists():
+        return bundled
+    return _HERE.parent / "data" / "config.json"
 
 
 def load_config():
-    with open(CONFIG_PATH, encoding="utf-8") as f:
+    with open(config_path(), encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -16,6 +28,18 @@ def co2_kg(kwh_saved, factor):
     if kwh_saved < 0:
         raise ValueError("kwh_saved must be >= 0")
     return kwh_saved * factor
+
+
+def rupees_saved(kwh_saved, baseline_amount, baseline_units):
+    """kWh saved -> rupees, at the household's own average rate from the baseline
+    bill. Returns None when the baseline bill has no amount."""
+    if baseline_amount is None:
+        return None
+    if baseline_units is None or baseline_units <= 0:
+        return None
+    if kwh_saved < 0:
+        raise ValueError("kwh_saved must be >= 0")
+    return kwh_saved * (baseline_amount / baseline_units)
 
 
 def mission_result(baseline_units, new_units, min_drop_pct=5.0):

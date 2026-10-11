@@ -1,6 +1,39 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Chiri backend
+Description: Sparrow backend - Cognito auth, a JWT-protected HTTP API and one DynamoDB table
+
+Parameters:
+  CognitoDomainPrefix:
+    Type: String
+    Description: Globally unique prefix for the Cognito Hosted UI domain.
+    AllowedPattern: '^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
+    ConstraintDescription: lowercase letters, digits and hyphens only.
+  AllowedOrigins:
+    Type: CommaDelimitedList
+    Description: Comma-separated browser origins allowed by CORS.
+    Default: 'http://localhost:5173'
+  CallbackUrls:
+    Type: CommaDelimitedList
+    Description: Comma-separated OAuth callback URLs for the SPA.
+    Default: 'http://localhost:5173/'
+  LogoutUrls:
+    Type: CommaDelimitedList
+    Description: Comma-separated OAuth logout URLs for the SPA.
+    Default: 'http://localhost:5173/'
+  GoogleClientId:
+    Type: String
+    Default: ''
+    Description: Google OAuth client id. Leave empty to skip the Google provider.
+  GoogleClientSecret:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: Google OAuth client secret. Leave empty to skip the Google provider.
+
+Conditions:
+  UseGoogle: !And
+    - !Not [!Equals [!Ref GoogleClientId, '']]
+    - !Not [!Equals [!Ref GoogleClientSecret, '']]
 
 Globals:
   Function:
@@ -9,8 +42,40 @@ Globals:
     MemorySize: 256
 
 Resources:
+  PhotoBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: !Ref AllowedOrigins
+            AllowedMethods: [GET, POST, PUT]
+            AllowedHeaders: ['*']
+            MaxAge: 3000
+            ExposedHeaders: [ETag]
+      LifecycleConfiguration:
+        Rules:
+          - Id: AbortIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+
+  # Logical id is deliberately unchanged: an in-place stack update keeps this
+  # table (and every stored bill) rather than replacing it.
   HouseholdsTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
@@ -20,38 +85,327 @@ Resources:
         - {AttributeName: pk, KeyType: HASH}
         - {AttributeName: sk, KeyType: RANGE}
 
+  CommunityTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      AttributeDefinitions:
+        - {AttributeName: pk, AttributeType: S}
+        - {AttributeName: sk, AttributeType: S}
+        - {AttributeName: gsi1pk, AttributeType: S}
+        - {AttributeName: gsi1sk, AttributeType: S}
+        - {AttributeName: gsi2pk, AttributeType: S}
+        - {AttributeName: gsi2sk, AttributeType: S}
+      KeySchema:
+        - {AttributeName: pk, KeyType: HASH}
+        - {AttributeName: sk, KeyType: RANGE}
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - {AttributeName: gsi1pk, KeyType: HASH}
+            - {AttributeName: gsi1sk, KeyType: RANGE}
+          Projection: {ProjectionType: ALL}
+        - IndexName: GSI2
+          KeySchema:
+            - {AttributeName: gsi2pk, KeyType: HASH}
+            - {AttributeName: gsi2sk, KeyType: RANGE}
+          Projection: {ProjectionType: ALL}
+
+  # --- auth ---------------------------------------------------------------
+
+  # --- api ----------------------------------------------------------------
+
   Api:
     Type: AWS::Serverless::HttpApi
     Properties:
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
       CorsConfiguration:
-        AllowOrigins: ['*']
-        AllowMethods: [GET, POST, OPTIONS]
-        AllowHeaders: ['*']
+        AllowOrigins: !Ref AllowedOrigins
+        AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
+        AllowHeaders: [Authorization, Content-Type]
+        ExposeHeaders: [apigw-requestid, x-amzn-requestid, X-Sparrow-Error-Code]
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            IdentitySource: $request.header.Authorization
+            JwtConfiguration:
+              issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/ap-south-1_flizICABi'
+              audience:
+                - 258etvvs8lkkprp0249b42g2kc
+
+  # --- functions ----------------------------------------------------------
+  # One function per route: each handler under test is exactly the function the
+  # route invokes, and every role is scoped to the one table. /hello is public;
+  # everything else falls through to the Cognito JWT authorizer.
 
   HelloFn:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../
-      Handler: backend.handlers.api.hello
+      CodeUri: ../backend
+      Handler: handlers.api.hello
       Events:
         Get:
           Type: HttpApi
-          Properties: {ApiId: !Ref Api, Path: /hello, Method: GET}
+          Properties: {ApiId: !Ref Api, Path: /hello, Method: GET, Auth: {Authorizer: NONE}}
 
-  MissionFn:
+  GetMeFn:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../
-      Handler: backend.handlers.api.mission
+      CodeUri: ../backend
+      Handler: handlers.api.get_me
       Environment:
         Variables: {TABLE: !Ref HouseholdsTable}
       Policies:
-        - DynamoDBCrudPolicy: {TableName: !Ref HouseholdsTable}
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem]
+              Resource: [!GetAtt HouseholdsTable.Arn]
+      Events:
+        Get:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /me, Method: GET}
+
+  PutMeFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend
+      Handler: handlers.api.put_me
+      Environment:
+        Variables: {TABLE: !Ref HouseholdsTable}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem]
+              Resource: [!GetAtt HouseholdsTable.Arn]
+      Events:
+        Put:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /me, Method: PUT}
+
+  IntroSeenFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend
+      Handler: handlers.api.post_intro_seen
+      Environment:
+        Variables: {TABLE: !Ref HouseholdsTable}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem]
+              Resource: [!GetAtt HouseholdsTable.Arn]
       Events:
         Post:
           Type: HttpApi
-          Properties: {ApiId: !Ref Api, Path: /mission, Method: POST}
+          Properties: {ApiId: !Ref Api, Path: /me/intro-seen, Method: POST}
+
+  DeleteMeFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend
+      Handler: handlers.api.delete_me
+      Environment:
+        Variables: {TABLE: !Ref HouseholdsTable}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:Query, dynamodb:BatchWriteItem]
+              Resource: [!GetAtt HouseholdsTable.Arn]
+            - Effect: Allow
+              Action: [s3:ListBucket]
+              Resource: [!GetAtt PhotoBucket.Arn]
+              Condition:
+                StringLike:
+                  s3:prefix: ['u/*']
+            - Effect: Allow
+              Action: [s3:DeleteObject]
+              Resource: [!Sub '${PhotoBucket.Arn}/u/*']
+      Events:
+        Delete:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /me, Method: DELETE}
+
+  GetBillsFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend
+      Handler: handlers.api.get_bills
+      Environment:
+        Variables: {TABLE: !Ref HouseholdsTable}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:Query]
+              Resource: [!GetAtt HouseholdsTable.Arn]
+      Events:
+        Get:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /bills, Method: GET}
+
+  PostBillsFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend
+      Handler: handlers.api.post_bills
+      Environment:
+        Variables: {TABLE: !Ref HouseholdsTable}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem]
+              Resource: [!GetAtt HouseholdsTable.Arn]
+      Events:
+        Post:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /bills, Method: POST}
+
+  PhotoFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend
+      Handler: handlers.api.photo
+      Environment:
+        Variables:
+          TABLE: !Ref HouseholdsTable
+          BUCKET: !Ref PhotoBucket
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem]
+              Resource: [!GetAtt HouseholdsTable.Arn]
+            - Effect: Allow
+              Action: [s3:PutObject, s3:GetObject, s3:DeleteObject]
+              Resource: [!Sub '${PhotoBucket.Arn}/u/*']
+            - Effect: Allow
+              Action: [s3:ListBucket]
+              Resource: [!GetAtt PhotoBucket.Arn]
+              Condition:
+                StringLike:
+                  s3:prefix: ['u/*']
+      Events:
+        Upload:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/bills/{month}/photo/upload', Method: POST}
+        Attach:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/bills/{month}/photo', Method: POST}
+        Get:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/bills/{month}/photo', Method: GET}
+        Delete:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/bills/{month}/photo', Method: DELETE}
+
+  GetMissionsFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend
+      Handler: handlers.api.get_missions
+      Environment:
+        Variables: {TABLE: !Ref HouseholdsTable}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:Query]
+              Resource: [!GetAtt HouseholdsTable.Arn]
+      Events:
+        Get:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /missions, Method: GET}
+
+  CompleteMissionFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend
+      Handler: handlers.api.complete_mission
+      Environment:
+        Variables: {TABLE: !Ref HouseholdsTable}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:PutItem]
+              Resource: [!GetAtt HouseholdsTable.Arn]
+      Events:
+        Post:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/missions/{id}/complete', Method: POST}
+
+  CommunityFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend
+      Handler: handlers.api.community
+      Environment:
+        Variables:
+          TABLE: !Ref HouseholdsTable
+          COMMUNITY_TABLE: !Ref CommunityTable
+          BUCKET: !Ref PhotoBucket
+          MODERATION_MODE: on
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:DeleteItem, dynamodb:BatchWriteItem, dynamodb:TransactWriteItems]
+              Resource:
+                - !GetAtt CommunityTable.Arn
+                - !Sub '${CommunityTable.Arn}/index/*'
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem]
+              Resource: [!GetAtt HouseholdsTable.Arn]
+            - Effect: Allow
+              Action: [s3:PutObject, s3:GetObject, s3:DeleteObject]
+              Resource: [!Sub '${PhotoBucket.Arn}/c/*']
+            - Effect: Allow
+              Action: [rekognition:DetectModerationLabels]
+              Resource: '*'
+      Events:
+        Feed:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /community/feed, Method: GET}
+        Upload:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /community/upload-ticket, Method: POST}
+        Posts:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /community/posts, Method: POST}
+        Post:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/community/posts/{id}', Method: GET}
+        DeletePost:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/community/posts/{id}', Method: DELETE}
+        Reaction:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/community/posts/{id}/reaction', Method: PUT}
+        Comments:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/community/posts/{id}/comments', Method: GET}
+        AddComment:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/community/posts/{id}/comments', Method: POST}
+        DeleteComment:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/community/posts/{id}/comments/{cid}', Method: DELETE}
+        Report:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/community/posts/{id}/report', Method: POST}
 
 Outputs:
   ApiUrl:
-    Value: !Sub "https://${Api}.execute-api.${AWS::Region}.amazonaws.com"
+    Value: !Sub 'https://${Api}.execute-api.${AWS::Region}.amazonaws.com'
+  UserPoolId:
+    Value: ap-south-1_flizICABi
+  UserPoolClientId:
+    Value: ap-south-1_flizICABiClient
+  CognitoDomain:
+    Value: !Sub '${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com'
+  Region:
+    Value: !Ref AWS::Region
+  PhotoBucketName:
+    Value: !Ref PhotoBucket

@@ -1,0 +1,26 @@
+{
+  "valid": {
+    "feedQueries": [
+      {"query": {"limit": "20"}},
+      {"query": {"limit": "1"}}
+    ],
+    "uploadTicket": {"contentType": "image/jpeg", "size": 1024},
+    "post": {"key": "c/user-a/photo.jpg", "caption": "Saved energy today", "tag": "energy_saving", "confirmAdult": true},
+    "reaction": {"type": "grow"},
+    "comment": {"text": "Nice work"},
+    "report": {"reason": "spam"}
+  },
+  "invalid": [
+    {"feedQuery": {"query": {"limit": ""}}},
+    {"feedQuery": {"query": {"limit": "0"}}},
+    {"feedQuery": {"query": {"limit": "21"}}},
+    {"feedQuery": {"query": {"limit": "twenty"}}},
+    {"feedQuery": {"query": {"cursor": "not-a-valid-cursor"}}},
+    {"post": {"key": "u/user-a/photo.jpg", "caption": "x", "tag": "energy_saving", "confirmAdult": true}},
+    {"post": {"key": "c/user-a/photo.jpg", "caption": "", "tag": "energy_saving", "confirmAdult": true}},
+    {"post": {"key": "c/user-a/photo.jpg", "caption": "x", "tag": "energy_saving", "confirmAdult": false}},
+    {"reaction": {"type": "heart"}},
+    {"comment": {"text": "   "}},
+    {"comment": {"text": "<b></b>"}}
+  ]
+}

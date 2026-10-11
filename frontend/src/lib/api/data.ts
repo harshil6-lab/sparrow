@@ -64,28 +64,71 @@ export interface PhotoTicket {
   expiresIn: number;
 }
 
+export type CommunityTag = "energy_saving" | "solar" | "trees" | "waste" | "water" | "community_drive" | "other";
+export type ReactionType = "grow" | "sun" | "cheer" | "love" | "idea";
+export type ReportReason = "spam" | "inappropriate" | "unsafe" | "other";
+
+export interface CommunityComment {
+  id: string;
+  authorName: string;
+  text: string;
+  createdAt: string;
+  isMine: boolean;
+}
+
+export interface CommunityPost {
+  id: string;
+  authorName: string;
+  isMine: boolean;
+  caption: string;
+  tag: CommunityTag;
+  photoUrl: string | null;
+  createdAt: string;
+  reactionCounts: Record<ReactionType, number>;
+  myReaction: ReactionType | null;
+  commentCount: number;
+  status?: "visible" | "hidden";
+  comments?: CommunityComment[];
+}
+
+export interface CommunityFeed {
+  posts: CommunityPost[];
+  cursor: string | null;
+}
+
+export interface CommunityDataProvider {
+  getCommunityFeed(limit?: number, cursor?: string | null): Promise<CommunityFeed>;
+  getCommunityPost(id: string): Promise<CommunityPost>;
+  createCommunityPost(input: {
+    photo: Blob;
+    caption: string;
+    tag: CommunityTag;
+    confirmAdult: boolean;
+    onProgress?: UploadProgress;
+  }): Promise<CommunityPost>;
+  deleteCommunityPost(id: string): Promise<void>;
+  setCommunityReaction(id: string, type: ReactionType | null): Promise<CommunityPost>;
+  getCommunityComments(id: string, cursor?: string | null): Promise<{ comments: CommunityComment[]; cursor: string | null }>;
+  addCommunityComment(id: string, text: string): Promise<CommunityComment>;
+  deleteCommunityComment(id: string, commentId: string): Promise<void>;
+  reportCommunityPost(id: string, reason: ReportReason): Promise<void>;
+}
+
 export type UploadProgress = (percent: number) => void;
 
 /**
- * Device-local preferences. "Watch on Wi-Fi only" and the reminders live on
- * this device only; the reminders line in the UI says exactly that and never
- * claims a notification was sent.
+ * Device-local preferences. Wi-Fi-only is consumed by photo upload and video
+ * playback. There is no notification system, so reminders are not exposed.
  */
 export interface Settings {
   wifiOnly: boolean;
   /** Ids of Learn notes the user saved. Drives the Learn empty state. */
   savedNotes: string[];
-  reminders: {
-    enabled: boolean;
-    time: string;
-    days: string[];
-  };
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   wifiOnly: true,
   savedNotes: [],
-  reminders: { enabled: true, time: "19:00", days: ["Mon", "Wed", "Sat"] },
 };
 
 /**
@@ -114,6 +157,7 @@ export interface DataProvider {
   deleteMe(user: User): Promise<void>;
   /** "Try with sample data": seed two sample bills, or clear them. */
   setDemo(user: User, demo: boolean): Promise<void>;
+  community: CommunityDataProvider;
 }
 
 const BILLS = "sparrow.bills.";
@@ -181,7 +225,13 @@ function verificationFor(previous: Bill | undefined, result: MissionResult | nul
 
 /** Per-user bill store in localStorage. New real users start with zero bills. */
 export class MockDataProvider implements DataProvider {
-  constructor(private readonly namespace = "") {}
+  readonly community: CommunityDataProvider;
+
+  private readonly communityPosts = new Map<string, CommunityPost[]>();
+
+  constructor(private readonly namespace = "") {
+    this.community = this.createCommunityProvider();
+  }
 
   private key(prefix: string, user: User): string {
     return `${this.namespace}${prefix}${user.id}`;
@@ -264,7 +314,6 @@ export class MockDataProvider implements DataProvider {
     return {
       wifiOnly: typeof stored.wifiOnly === "boolean" ? stored.wifiOnly : DEFAULT_SETTINGS.wifiOnly,
       savedNotes: Array.isArray(stored.savedNotes) ? stored.savedNotes : [],
-      reminders: { ...DEFAULT_SETTINGS.reminders, ...(stored.reminders ?? {}) },
     };
   }
 
@@ -301,5 +350,49 @@ export class MockDataProvider implements DataProvider {
     write(this.key(MISSION, user), false);
     write(this.key(MISSIONS_DONE, user), []);
     write(this.key(DEMO, user), true);
+  }
+
+  private createCommunityProvider(): CommunityDataProvider {
+    const reactions = (): Record<ReactionType, number> => ({ grow: 0, sun: 0, cheer: 0, love: 0, idea: 0 });
+    const sample = (): CommunityPost[] => [
+      { id: "demo-1", authorName: "Asha", isMine: false, caption: "Set the AC a little higher and kept the fan on.", tag: "energy_saving", photoUrl: null, createdAt: new Date(Date.now() - 3600000).toISOString(), reactionCounts: reactions(), myReaction: null, commentCount: 0 },
+      { id: "demo-2", authorName: "Ravi", isMine: false, caption: "Our balcony plants are thriving with a little care.", tag: "trees", photoUrl: null, createdAt: new Date(Date.now() - 86400000).toISOString(), reactionCounts: reactions(), myReaction: null, commentCount: 0 },
+      { id: "demo-3", authorName: "Meera", isMine: false, caption: "Switched off standby power before bedtime.", tag: "energy_saving", photoUrl: null, createdAt: new Date(Date.now() - 172800000).toISOString(), reactionCounts: reactions(), myReaction: null, commentCount: 0 },
+    ];
+    const posts = () => {
+      const existing = this.communityPosts.get(this.namespace);
+      if (existing) return existing;
+      const seeded = this.namespace ? sample() : [];
+      this.communityPosts.set(this.namespace, seeded);
+      return seeded;
+    };
+    return {
+      getCommunityFeed: async () => ({ posts: posts(), cursor: null }),
+      getCommunityPost: async (id) => {
+        const post = posts().find((entry) => entry.id === id);
+        if (!post) throw new Error("post not found");
+        return post;
+      },
+      createCommunityPost: async ({ caption, tag }) => {
+        const post: CommunityPost = { id: `demo-${Date.now()}`, authorName: "Demo", isMine: true, caption, tag, photoUrl: null, createdAt: new Date().toISOString(), reactionCounts: reactions(), myReaction: null, commentCount: 0 };
+        posts().unshift(post);
+        return post;
+      },
+      deleteCommunityPost: async (id) => {
+        this.communityPosts.set(this.namespace, posts().filter((entry) => entry.id !== id));
+      },
+      setCommunityReaction: async (id, type) => {
+        const post = posts().find((entry) => entry.id === id);
+        if (!post) throw new Error("post not found");
+        if (post.myReaction) post.reactionCounts[post.myReaction] -= 1;
+        if (type) post.reactionCounts[type] += 1;
+        post.myReaction = type;
+        return post;
+      },
+      getCommunityComments: async () => ({ comments: [], cursor: null }),
+      addCommunityComment: async (_id, text) => ({ id: `comment-${Date.now()}`, authorName: "Demo", text, createdAt: new Date().toISOString(), isMine: true }),
+      deleteCommunityComment: async () => undefined,
+      reportCommunityPost: async () => undefined,
+    };
   }
 }

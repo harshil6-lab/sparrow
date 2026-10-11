@@ -4,14 +4,13 @@ import { Icon } from "../../components/Icon";
 import { SparrowMascot } from "../../components/SparrowMascot";
 import { LearnArt } from "../../components/scenes/LearnArt";
 import type { FactCard } from "../../lib/learn";
-import { visibleNote } from "../../lib/learn";
+import { hasCitableSource, visibleNote } from "../../lib/learn";
 
 /**
  * Learn tab. Cards come from data/facts.json in the export's
  * Habit -> Better habit -> Why -> Source format.
  *
- * A card with no cited source shows a "source pending" chip, no link, and any
- * numeric savings claim in its copy is dropped (see visibleNote).
+ * A card with no cited source shows a "source pending" chip and no link.
  */
 export function LearnTab({
   facts,
@@ -52,7 +51,8 @@ export function LearnTab({
       ) : (
         <div className="habit-grid">
           {facts.map((card) => {
-            const why = visibleNote(t(`learn.${card.id}.why`), card.source);
+            const hasSource = hasCitableSource(card);
+            const why = visibleNote(t(card.why), hasSource);
             return (
               <article
                 key={card.id}
@@ -70,11 +70,11 @@ export function LearnTab({
                 <dl>
                   <div>
                     <dt>{t("learn.habit")}</dt>
-                    <dd>{t(`learn.${card.id}.habit`)}</dd>
+                    <dd>{t(card.habit)}</dd>
                   </div>
                   <div className="better">
                     <dt>{t("learn.betterHabit")}</dt>
-                    <dd>{t(`learn.${card.id}.better`)}</dd>
+                    <dd>{t(card.better_habit)}</dd>
                   </div>
                   {why ? (
                     <div>
@@ -82,12 +82,24 @@ export function LearnTab({
                       <dd>{why}</dd>
                     </div>
                   ) : null}
+                  {hasSource ? card.claims?.map((claim) => (
+                    <div key={claim.text}>
+                      <dt>
+                        <span className={claim.kind === "estimate" ? "source-chip" : undefined}>
+                          {claim.kind === "estimate" ? t("learn.estimate") : t("learn.fact")}
+                        </span>
+                      </dt>
+                      <dd>{t(claim.text)}</dd>
+                    </div>
+                  )) : null}
                 </dl>
-                {card.source ? (
+                {hasSource ? (
                   <small className="source-line">
-                    <a href={card.source} target="_blank" rel="noreferrer">
-                      {t("learn.sourceLabel")}
-                    </a>
+                    {card.sources.map((source) => (
+                      <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer">
+                        {t("learn.sourceLabel")}: {source.publisher}
+                      </a>
+                    ))}
                   </small>
                 ) : (
                   <small className="source-line">

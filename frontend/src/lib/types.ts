@@ -19,6 +19,7 @@ export interface SetupAnswers {
 /** Everything stored against a user's "Nest". */
 export interface Profile {
   user: User;
+  displayName?: string | null;
   introSeen: boolean;
   setupComplete: boolean;
   language: string;
@@ -54,4 +55,3 @@ export function nextRoute(profile: Profile | null): "/login" | "/story" | "/setu
   if (!profile.setupComplete) return "/setup";
   return "/app";
 }
-

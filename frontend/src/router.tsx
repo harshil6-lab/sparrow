@@ -25,7 +25,7 @@ export function RequireProfile({
   const { kind } = useSession();
   const location = useLocation();
   if (!ready) return <Loading />;
-  if (!profile || kind === "none") return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  if (!profile || kind === "none") return <Navigate to="/login" state={{ from: `${location.pathname}${location.search}` }} replace />;
   if (requireSetup && !profile.setupComplete) return <Navigate to="/setup" replace />;
   return <>{children}</>;
 }

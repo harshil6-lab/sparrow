@@ -4,7 +4,7 @@ import { Icon } from "../../components/Icon";
 import { SparrowMascot } from "../../components/SparrowMascot";
 import { Sheet } from "../../components/ui/Sheet";
 import { api } from "../../lib/api";
-import type { AddBillResult } from "../../lib/api/data";
+import type { AddBillResult, Bill } from "../../lib/api/data";
 import { HttpError, NetworkError } from "../../lib/api/http";
 import { useAuth } from "../../lib/AuthProvider";
 import {
@@ -14,6 +14,8 @@ import {
   buildBillPayload,
   validateAmount,
   validateUnits,
+  previousMonthKey,
+  isPlausibilityWarning,
   type AmountError,
   type UnitsError,
 } from "../../lib/bills";
@@ -32,6 +34,7 @@ export function BillSheet({
   onClose,
   demo,
   wifiOnly,
+  bills,
   onSaved,
   onShare,
 }: {
@@ -39,6 +42,7 @@ export function BillSheet({
   onClose: () => void;
   demo: boolean;
   wifiOnly: boolean;
+  bills: Bill[];
   onSaved: () => Promise<void>;
   onShare: (kwh: number) => void;
 }) {
@@ -52,11 +56,14 @@ export function BillSheet({
   const [phase, setPhase] = useState<Phase>("entry");
   const [saved, setSaved] = useState<AddBillResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoProgress, setPhotoProgress] = useState(0);
+  const [plausibilityPending, setPlausibilityPending] = useState(false);
   const retryPhoto = useRef(false);
+  const submitLock = useRef(false);
 
   useEffect(() => {
     if (!open) return;
@@ -68,11 +75,14 @@ export function BillSheet({
     setPhase("entry");
     setSaved(null);
     setErrorMessage(null);
+    setErrorDetails(null);
     setPhoto(null);
     setPhotoPreview(null);
     setPhotoError(null);
     setPhotoProgress(0);
     retryPhoto.current = false;
+    submitLock.current = false;
+    setPlausibilityPending(false);
   }, [open]);
 
   const choosePhoto = async (file: File | undefined) => {
@@ -89,7 +99,8 @@ export function BillSheet({
     }
   };
 
-  const submit = async (retry = false) => {
+  const submit = async (retry = false, confirmed = false) => {
+    if (submitLock.current) return;
     const error = validateUnits(units);
     const nextAmountError = validateAmount(amount);
     if (error || nextAmountError) {
@@ -100,14 +111,24 @@ export function BillSheet({
     const value = parseUnits(units);
     const amountValue = parseAmount(amount);
     if (!profile || value === null) return;
+    const previous = bills.find((bill) => bill.month === previousMonthKey(month));
+    if (!retry && !confirmed && previous && isPlausibilityWarning(previous.units, value)) {
+      setPlausibilityPending(true);
+      return;
+    }
+    setPlausibilityPending(false);
+    submitLock.current = true;
     setPhase("loading");
     setErrorMessage(null);
+    setErrorDetails(null);
     try {
-      const result = await api.data.addBill(profile.user, {
-        ...buildBillPayload(month, value, amountValue),
-      });
+      const result = retry && saved
+        ? saved
+        : await api.data.addBill(profile.user, {
+          ...buildBillPayload(month, value, amountValue),
+        });
       setSaved(result);
-      await onSaved();
+      if (!retry) await onSaved();
       if (photo && (!retry || retryPhoto.current)) {
         try {
           setPhotoProgress(0);
@@ -128,7 +149,7 @@ export function BillSheet({
         console.error("[sparrow] network error", error);
       }
       if (error instanceof HttpError && error.status === 400) {
-        setErrorMessage(t("bill.saveErrorValidation", { details: error.message }));
+        setErrorMessage(t("bill.saveError"));
       } else if (error instanceof HttpError && error.status === 401) {
         setErrorMessage(t("bill.saveErrorSession"));
       } else if (error instanceof HttpError && error.status >= 500) {
@@ -138,7 +159,14 @@ export function BillSheet({
       } else {
         setErrorMessage(t("bill.saveError"));
       }
+      setErrorDetails(t("bill.saveErrorDetails", {
+        status: error instanceof HttpError ? error.status : "—",
+        requestId: error instanceof HttpError ? error.requestId ?? "—" : "—",
+        code: error instanceof HttpError ? error.errorCode : "network_error",
+      }));
       setPhase("error");
+    } finally {
+      submitLock.current = false;
     }
   };
 
@@ -191,6 +219,7 @@ export function BillSheet({
           <Icon name="bill" size={34} />
           <strong>{t("bill.saveError")}</strong>
           <p>{errorMessage ?? t("bill.saveErrorHint")}</p>
+          {errorDetails ? <small className="field-hint">{errorDetails}</small> : null}
           <button className="quiet-button" onClick={() => setPhase("entry")}>
             {t("home.retry")}
           </button>
@@ -246,9 +275,15 @@ export function BillSheet({
             {photoPreview ? (
               <div>
                 <img src={photoPreview} alt={t("bill.photoAlt", { month })} className="bill-photo-thumb" />
-                <button type="button" className="text-button" onClick={() => { setPhoto(null); setPhotoPreview(null); }}>
-                  {t("bill.photoRemove")}
-                </button>
+                <div className="photo-actions">
+                  <label className="quiet-button">
+                    {t("bill.photoReplace")}
+                    <input hidden type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(e) => void choosePhoto(e.target.files?.[0])} />
+                  </label>
+                  <button type="button" className="quiet-button" onClick={() => { setPhoto(null); setPhotoPreview(null); }}>
+                    {t("bill.photoRemove")}
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="photo-actions">
@@ -265,7 +300,16 @@ export function BillSheet({
             {photoError ? <div className="inline-error">{photoError}</div> : null}
             <small className="field-hint">{t("bill.photoPrivacy")}</small>
           </div>
-          <button className="primary-button wide" onClick={() => void submit()}>
+          {plausibilityPending ? (
+            <div className="plausibility-warning" role="alert">
+              <p>{t("bill.plausibilityWarning")}</p>
+              <div className="photo-actions">
+                <button className="primary-button" onClick={() => void submit(false, true)}>{t("bill.plausibilitySave")}</button>
+                <button className="quiet-button" onClick={() => setPlausibilityPending(false)}>{t("bill.plausibilityEdit")}</button>
+              </div>
+            </div>
+          ) : null}
+          <button className="primary-button wide" disabled={submitLock.current} onClick={() => void submit()}>
             {t("bill.verify")} <Icon name="arrow" size={18} />
           </button>
         </>
