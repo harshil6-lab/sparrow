@@ -101,6 +101,11 @@ export class MockAuthProvider implements AuthProvider {
     return { user };
   }
 
+  /** Mock mode never leaves the page for OAuth; there is nothing to complete. */
+  async completeOAuthRedirect(): Promise<{ user: User | null; error: string | null }> {
+    return { user: null, error: null };
+  }
+
   async signOut(): Promise<void> {
     this.writeUser(null);
   }

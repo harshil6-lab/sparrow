@@ -17,6 +17,7 @@ interface AuthContextValue {
   resetPassword: (email: string) => Promise<void>;
   confirmResetPassword: (email: string, code: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<Profile>;
+  completeOAuthRedirect: () => Promise<{ profile: Profile | null; error: string | null }>;
   signOut: () => Promise<void>;
   markIntroSeen: (seen?: boolean) => void;
   completeSetup: (answers: Partial<SetupAnswers>) => Promise<void>;
@@ -161,6 +162,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return adopt(user);
   }, [adopt]);
 
+  /**
+   * Finishes an OAuth (Google) redirect return. Waits for the code exchange,
+   * then adopts the signed-in user. Never throws: a failed profile load leaves
+   * the splash in its normal state instead of showing an error.
+   */
+  const completeOAuthRedirect = useCallback(async (): Promise<{ profile: Profile | null; error: string | null }> => {
+    const { user, error } = await api.auth.completeOAuthRedirect();
+    if (error) return { profile: null, error };
+    if (!user) return { profile: null, error: null };
+    try {
+      return { profile: await adopt(user), error: null };
+    } catch {
+      return { profile: null, error: null };
+    }
+  }, [adopt]);
+
   const signOut = useCallback(async () => {
     await api.auth.signOut();
     clearDemo();
@@ -234,6 +251,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetPassword,
       confirmResetPassword,
       signInWithGoogle,
+      completeOAuthRedirect,
       signOut,
       markIntroSeen,
       completeSetup,
@@ -251,6 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetPassword,
       confirmResetPassword,
       signInWithGoogle,
+      completeOAuthRedirect,
       signOut,
       markIntroSeen,
       completeSetup,

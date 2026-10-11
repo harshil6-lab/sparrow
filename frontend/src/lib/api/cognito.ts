@@ -17,12 +17,19 @@ import {
  * real sign-in is attempted. Mock mode never touches this file's dependencies.
  *
  * All failures surface as an AuthError with a friendly `code`; the login screen
- * maps that code to a translated sentence. Stack traces never reach the UI.
+ * maps that code to a translated sentence. Stack traces never reach the UI. The
+ * raw provider error name rides along in `detail` for the real-mode Details line.
  */
 type AuthModule = typeof import("aws-amplify/auth");
 
 let configurePromise: Promise<AuthModule> | null = null;
 
+/**
+ * The OAuth callback must byte-for-byte match an allowed Cognito callback URL.
+ * On the SPA that is the bare origin with a trailing slash:
+ * https://main.d27dxqpx3jzuju.amplifyapp.com/ (prod) and
+ * http://localhost:5173/ (dev). `window.location.origin` gives exactly that.
+ */
 function redirectUrl(): string {
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   return `${origin}/`;
@@ -85,6 +92,13 @@ const ERROR_MAP: Record<string, AuthErrorCode> = {
   NetworkError: "network",
 };
 
+/** Provider error name, preferring the AWS `__type` tail when `name` is generic. */
+function errorName(err: unknown): string {
+  const named = err as { name?: string; __type?: string };
+  const tail = (named?.__type ?? "").split("#").pop() ?? "";
+  return named?.name || tail;
+}
+
 function isNetworkError(err: unknown): boolean {
   if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
   const message = String((err as { message?: unknown })?.message ?? "");
@@ -93,10 +107,12 @@ function isNetworkError(err: unknown): boolean {
 
 function mapError(err: unknown): AuthError {
   if (err instanceof AuthError) return err;
-  const named = err as { name?: string; __type?: string };
-  const code =
-    ERROR_MAP[named?.name ?? ""] ?? ERROR_MAP[(named?.__type ?? "").split("#").pop() ?? ""] ?? (isNetworkError(err) ? "network" : "unknown");
-  return new AuthError(code, named?.name || String(err));
+  const named = err as { name?: string; __type?: string; message?: string };
+  const techName = errorName(err);
+  const tail = (named?.__type ?? "").split("#").pop() ?? "";
+  const code = ERROR_MAP[named?.name ?? ""] ?? ERROR_MAP[tail] ?? (isNetworkError(err) ? "network" : "unknown");
+  const message = typeof named?.message === "string" && named.message ? named.message : techName;
+  return new AuthError(code, message, techName || undefined);
 }
 
 function displayName(email: string): string {
@@ -119,6 +135,11 @@ function userFromSession(session: Awaited<ReturnType<AuthModule["fetchAuthSessio
   const name = typeof payload?.name === "string" ? payload.name : "";
   const provider: User["provider"] = payload?.identities ? "google" : "email";
   return { id, email, displayName: name || displayName(email), provider };
+}
+
+/** True when the URL is an OAuth callback (success code or a provider error). */
+export function hasOAuthRedirect(search: string): boolean {
+  return /[?&](code|error|error_description)=/.test(search);
 }
 
 export function createCognitoAuthProvider(): AuthProvider {
@@ -166,6 +187,11 @@ export function createCognitoAuthProvider(): AuthProvider {
       try {
         await auth.confirmSignUp({ username: email.trim().toLowerCase(), confirmationCode: code.trim() });
       } catch (err) {
+        // NotAuthorizedException here means the account is already confirmed,
+        // not that a password was wrong. UserNotFound means there is no account.
+        const name = errorName(err);
+        if (name === "NotAuthorizedException") throw new AuthError("alreadyConfirmed", undefined, name);
+        if (name === "UserNotFoundException") throw new AuthError("userNotFound", undefined, name);
         throw mapError(err);
       }
     },
@@ -175,6 +201,8 @@ export function createCognitoAuthProvider(): AuthProvider {
       try {
         await auth.resendSignUpCode({ username: email.trim().toLowerCase() });
       } catch (err) {
+        const name = errorName(err);
+        if (name === "UserNotFoundException") throw new AuthError("userNotFound", undefined, name);
         throw mapError(err);
       }
     },
@@ -207,6 +235,48 @@ export function createCognitoAuthProvider(): AuthProvider {
       await auth.signInWithRedirect({ provider: "Google" });
       return new Promise<AuthResult>(() => {
         /* redirected away */
+      });
+    },
+
+    /**
+     * Finishes a Hosted-UI (Google) return. `Amplify.configure()` is what makes
+     * Amplify read `?code=` from the URL and exchange it, so we configure first,
+     * then wait for the Hub `signInWithRedirect` / `signInWithRedirect_failure`
+     * event (and the parked `fetchAuthSession`) before resolving. Never rejects.
+     */
+    async completeOAuthRedirect(): Promise<{ user: User | null; error: string | null }> {
+      const auth = await loadAuth();
+      const { Hub } = await import("aws-amplify/utils");
+      return new Promise((resolve) => {
+        let settled = false;
+        const hold: { timer?: ReturnType<typeof setTimeout> } = {};
+        const unsub = Hub.listen("auth", ({ payload }) => {
+          if (payload.event === "signInWithRedirect") {
+            void readSession();
+          } else if (payload.event === "signInWithRedirect_failure") {
+            const error = (payload.data as { error?: { message?: string; name?: string } } | undefined)?.error;
+            finish({ user: null, error: error?.message ?? error?.name ?? "signInWithRedirect_failure" });
+          }
+        });
+        function finish(result: { user: User | null; error: string | null }): void {
+          if (settled) return;
+          settled = true;
+          if (hold.timer !== undefined) clearTimeout(hold.timer);
+          unsub();
+          resolve(result);
+        }
+        async function readSession(): Promise<void> {
+          try {
+            const user = userFromSession(await auth.fetchAuthSession());
+            finish({ user, error: null });
+          } catch (err) {
+            finish({ user: null, error: mapError(err).message });
+          }
+        }
+        // Backstop: never leave the splash hanging if no Hub event arrives.
+        hold.timer = setTimeout(() => finish({ user: null, error: null }), 20000);
+        // Also covers a flow that already completed before we subscribed.
+        void readSession();
       });
     },
 

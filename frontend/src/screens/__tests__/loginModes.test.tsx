@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { I18nextProvider } from "react-i18next";
@@ -133,5 +133,115 @@ describe("login screen modes", () => {
     expect(await screen.findByText("Reset your password")).toBeInTheDocument();
     await userEvent.click(screen.getByText("Send code"));
     expect(auth.resetPassword).toHaveBeenCalledWith("a@b.com");
+  });
+
+  /** Drives the screen to the confirm step via an unconfirmed sign-in. */
+  async function toConfirmMode() {
+    auth.signInWithEmail.mockRejectedValueOnce(new AuthError("unconfirmed"));
+    renderLogin();
+    await userEvent.type(screen.getByLabelText("Email address"), "a@b.com");
+    await userEvent.type(passwordInput() as HTMLInputElement, "password123");
+    await userEvent.click(screen.getByText("Sign in"));
+    await screen.findByText("Check your email");
+  }
+
+  it("confirm succeeds but auto sign-in fails: banner, no error", async () => {
+    env.USE_MOCK = false;
+    await toConfirmMode();
+    auth.confirmSignUp.mockResolvedValue(undefined);
+    auth.signInWithEmail.mockRejectedValue(new AuthError("wrongPassword"));
+    await userEvent.type(screen.getByLabelText("Confirmation code"), "123456");
+    await userEvent.click(screen.getByText("Confirm"));
+    expect(await screen.findByText("Email confirmed. Please sign in.")).toBeInTheDocument();
+    expect((screen.getByLabelText("Email address") as HTMLInputElement).value).toBe("a@b.com");
+    expect(screen.queryByText("That email or password doesn't look right.")).toBeNull();
+  });
+
+  it("is single-flight: a double submit makes one confirm call", async () => {
+    env.USE_MOCK = false;
+    await toConfirmMode();
+    let release: (() => void) | undefined;
+    auth.confirmSignUp.mockImplementation(() => new Promise<void>((resolve) => { release = resolve; }));
+    auth.signInWithEmail.mockResolvedValue({ introSeen: true, setupComplete: true, user: { id: "s" } });
+    await userEvent.type(screen.getByLabelText("Confirmation code"), "123456");
+    const button = screen.getByText("Confirm");
+    await userEvent.click(button);
+    await userEvent.click(button);
+    expect(auth.confirmSignUp).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      release?.();
+    });
+  });
+
+  it("resend starts a visible cooldown and clears the old code", async () => {
+    env.USE_MOCK = false;
+    await toConfirmMode();
+    auth.resendSignUpCode.mockResolvedValue(undefined);
+    await userEvent.click(screen.getByText("Resend code"));
+    expect(await screen.findByText("A new code was sent. The old code no longer works.")).toBeInTheDocument();
+    expect(auth.resendSignUpCode).toHaveBeenCalledWith("a@b.com");
+    expect(screen.getByRole("button", { name: "Resend code in 30s" })).toBeDisabled();
+  });
+
+  it("an expired code still signs in an already-confirmed account", async () => {
+    env.USE_MOCK = false;
+    await toConfirmMode();
+    auth.confirmSignUp.mockRejectedValue(new AuthError("expiredCode"));
+    auth.signInWithEmail.mockResolvedValue({ introSeen: true, setupComplete: true, user: { id: "s" } });
+    await userEvent.type(screen.getByLabelText("Confirmation code"), "123456");
+    await userEvent.click(screen.getByText("Confirm"));
+    expect(await screen.findByText("APP GATE")).toBeInTheDocument();
+  });
+
+  it("an expired code on an unconfirmed account offers a resend", async () => {
+    env.USE_MOCK = false;
+    await toConfirmMode();
+    auth.confirmSignUp.mockRejectedValue(new AuthError("expiredCode"));
+    auth.signInWithEmail.mockRejectedValue(new AuthError("unconfirmed"));
+    await userEvent.type(screen.getByLabelText("Confirmation code"), "123456");
+    await userEvent.click(screen.getByText("Confirm"));
+    expect(await screen.findByText(/Confirm your email first/)).toBeInTheDocument();
+    expect(screen.getByText("Resend code")).toBeInTheDocument();
+  });
+
+  it("maps a wrong code to its own friendly message", async () => {
+    env.USE_MOCK = false;
+    await toConfirmMode();
+    auth.confirmSignUp.mockRejectedValue(new AuthError("badCode"));
+    await userEvent.type(screen.getByLabelText("Confirmation code"), "123456");
+    await userEvent.click(screen.getByText("Confirm"));
+    expect(await screen.findByText("That code isn't right. Check your email and try again.")).toBeInTheDocument();
+  });
+
+  it("shows the technical error name in real mode only", async () => {
+    env.USE_MOCK = false;
+    await toConfirmMode();
+    auth.confirmSignUp.mockRejectedValue(new AuthError("badCode", "bad", "CodeMismatchException"));
+    await userEvent.type(screen.getByLabelText("Confirmation code"), "123456");
+    await userEvent.click(screen.getByText("Confirm"));
+    expect(await screen.findByText("Details: CodeMismatchException")).toBeInTheDocument();
+  });
+
+  it("never writes the password to storage", async () => {
+    env.USE_MOCK = false;
+    await toConfirmMode();
+    auth.confirmSignUp.mockRejectedValue(new AuthError("badCode"));
+    await userEvent.type(screen.getByLabelText("Confirmation code"), "123456");
+    await userEvent.click(screen.getByText("Confirm"));
+    await screen.findByText("That code isn't right. Check your email and try again.");
+    expect(JSON.stringify(localStorage) + JSON.stringify(sessionStorage)).not.toContain("password123");
+  });
+
+  it("shows Cognito's password policy text when sign-up rejects", async () => {
+    env.USE_MOCK = false;
+    renderLogin();
+    await userEvent.click(screen.getByText("New here? Create account"));
+    await userEvent.type(screen.getByLabelText("Email address"), "a@b.com");
+    await userEvent.type(passwordInput() as HTMLInputElement, "password123");
+    auth.signUp.mockRejectedValue(
+      new AuthError("invalidPassword", "Password does not conform to policy: at least 6 characters", "InvalidPasswordException"),
+    );
+    await userEvent.click(screen.getByText("Create account"));
+    expect(await screen.findByText("Password does not conform to policy: at least 6 characters")).toBeInTheDocument();
   });
 });

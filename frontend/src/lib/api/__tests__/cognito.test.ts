@@ -22,6 +22,29 @@ const configure = vi.hoisted(() => vi.fn());
 vi.mock("aws-amplify", () => ({ Amplify: { configure } }));
 vi.mock("aws-amplify/auth", () => amplify);
 
+/**
+ * Hub is a tiny in-test event bus: the provider subscribes to it to learn when
+ * Amplify's OAuth code exchange finishes (or fails).
+ */
+const hub = vi.hoisted(() => {
+  type Payload = { payload: { event: string; data?: unknown } };
+  const listeners: Array<(arg: Payload) => void> = [];
+  return {
+    listeners,
+    listen: vi.fn((_channel: string, cb: (arg: Payload) => void) => {
+      listeners.push(cb);
+      return () => {
+        const index = listeners.indexOf(cb);
+        if (index >= 0) listeners.splice(index, 1);
+      };
+    }),
+    emit(event: string, data?: unknown) {
+      for (const cb of [...listeners]) cb({ payload: { event, data } });
+    },
+  };
+});
+vi.mock("aws-amplify/utils", () => ({ Hub: { listen: hub.listen } }));
+
 type CognitoModule = typeof import("../cognito");
 let createCognitoAuthProvider: CognitoModule["createCognitoAuthProvider"];
 
@@ -36,6 +59,7 @@ beforeEach(async () => {
   vi.stubEnv("VITE_COGNITO_CLIENT_ID", "test-client");
   vi.stubEnv("VITE_COGNITO_DOMAIN", "test.auth.ap-south-1.amazoncognito.com");
   vi.clearAllMocks();
+  hub.listeners.length = 0;
   ({ createCognitoAuthProvider } = await import("../cognito"));
 });
 
@@ -175,5 +199,68 @@ describe("cognito auth provider (real mode)", () => {
     await createCognitoAuthProvider().getCurrentUser();
     void createCognitoAuthProvider().signInWithGoogle();
     await vi.waitFor(() => expect(amplify.signInWithRedirect).toHaveBeenCalledWith({ provider: "Google" }));
+  });
+
+  it("maps a confirm-time NotAuthorizedException to 'already confirmed'", async () => {
+    amplify.confirmSignUp.mockRejectedValue(Object.assign(new Error("nope"), { name: "NotAuthorizedException" }));
+    await expect(createCognitoAuthProvider().confirmSignUp("a@b.com", "123456")).rejects.toMatchObject({
+      code: "alreadyConfirmed",
+      detail: "NotAuthorizedException",
+    });
+  });
+
+  it("maps an unknown account on resend / confirm", async () => {
+    amplify.confirmSignUp.mockRejectedValue(Object.assign(new Error("gone"), { name: "UserNotFoundException" }));
+    await expect(createCognitoAuthProvider().confirmSignUp("a@b.com", "123456")).rejects.toMatchObject({
+      code: "userNotFound",
+      detail: "UserNotFoundException",
+    });
+    amplify.resendSignUpCode.mockRejectedValue(Object.assign(new Error("gone"), { name: "UserNotFoundException" }));
+    await expect(createCognitoAuthProvider().resendSignUpCode("a@b.com")).rejects.toMatchObject({
+      code: "userNotFound",
+      detail: "UserNotFoundException",
+    });
+  });
+
+  it("maps a limit error on confirm", async () => {
+    amplify.confirmSignUp.mockRejectedValue(Object.assign(new Error("slow down"), { name: "LimitExceededException" }));
+    await expect(createCognitoAuthProvider().confirmSignUp("a@b.com", "123456")).rejects.toMatchObject({ code: "limit" });
+  });
+
+  it("keeps Cognito's password policy text for InvalidPasswordException", async () => {
+    const policy = "Password does not conform to policy: at least 6 characters";
+    amplify.signUp.mockRejectedValue(Object.assign(new Error(policy), { name: "InvalidPasswordException" }));
+    await expect(createCognitoAuthProvider().signUp("a@b.com", "short")).rejects.toMatchObject({
+      code: "invalidPassword",
+      message: policy,
+      detail: "InvalidPasswordException",
+    });
+  });
+
+  it("waits for the OAuth exchange and returns the signed-in user", async () => {
+    let dispatched = false;
+    amplify.fetchAuthSession.mockImplementation(async () => {
+      if (!dispatched) {
+        dispatched = true;
+        hub.emit("signInWithRedirect");
+      }
+      return sessionWithIdToken({ sub: "s1", email: "g@b.com", name: "G", identities: [{}] });
+    });
+    const { user, error } = await createCognitoAuthProvider().completeOAuthRedirect();
+    expect(error).toBeNull();
+    expect(user).toMatchObject({ id: "s1", provider: "google" });
+  });
+
+  it("surfaces the OAuth failure description from the Hub event", async () => {
+    amplify.fetchAuthSession.mockImplementation(() => new Promise(() => {}));
+    const pending = createCognitoAuthProvider().completeOAuthRedirect();
+    await vi.waitFor(() => expect(amplify.fetchAuthSession).toHaveBeenCalled());
+    hub.emit("signInWithRedirect_failure", { error: { name: "OAuthError", message: "access_denied" } });
+    await expect(pending).resolves.toEqual({ user: null, error: "access_denied" });
+  });
+
+  it("resolves with no error when there is no OAuth flow to finish", async () => {
+    amplify.fetchAuthSession.mockResolvedValue({});
+    await expect(createCognitoAuthProvider().completeOAuthRedirect()).resolves.toEqual({ user: null, error: null });
   });
 });

@@ -19,10 +19,17 @@ import { resetApi } from "../lib/api";
  * Mock mode keeps the original email-only screen (and its simulated Google
  * button). Real mode (VITE_USE_MOCK=false) uses Cognito: sign in, create
  * account with a 6-digit confirmation code, and forgot-password.
+ *
+ * The sign-up password only ever lives in this component's memory. After a
+ * successful confirm it is reused for one auto sign-in attempt; if that is not
+ * possible the user is sent to the sign-in screen with a success banner, never
+ * an error.
  */
 type Mode = "signin" | "signup" | "confirm" | "forgot" | "reset";
 
 const MIN_PASSWORD = 8;
+const RESEND_COOLDOWN = 30;
+const ARROW = "\u2190";
 
 function errorKey(code: AuthErrorCode): string {
   return `login.error${code.charAt(0).toUpperCase()}${code.slice(1)}`;
@@ -39,8 +46,11 @@ export function LoginScreen() {
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
+  const [errorDetail, setErrorDetail] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [passwordPolicy, setPasswordPolicy] = useState("");
+  const [resendIn, setResendIn] = useState(0);
   const clearDemoBeforeAuth = () => {
     if (isDemoPending()) {
       clearDemo();
@@ -53,8 +63,22 @@ export function LoginScreen() {
     if (consumeSessionExpired()) setNotice(t("login.sessionExpired"));
   }, [t]);
 
+  // Resend cooldown: one visible tick per second, cleared on unmount.
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const id = window.setTimeout(() => setResendIn((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearTimeout(id);
+  }, [resendIn]);
+
   const messageFor = (err: unknown): string =>
     err instanceof AuthError ? t(errorKey(err.code)) : t("login.errorUnknown");
+
+  /** Shows the friendly message; keeps the technical name for real-mode "Details". */
+  const fail = (err: unknown) => {
+    setError(messageFor(err));
+    setErrorDetail(!USE_MOCK && err instanceof AuthError ? err.detail ?? "" : "");
+    setNotice("");
+  };
 
   const go = (profile: Profile | null) => {
     const destination = location.state?.from;
@@ -91,7 +115,7 @@ export function LoginScreen() {
         </aside>
         <section className="auth-panel">
           <div className="auth-top">
-            <button type="button" onClick={() => navigate("/welcome")}>← {t("login.back")}</button>
+            <button type="button" onClick={() => navigate("/welcome")}>{ARROW} {t("login.back")}</button>
           </div>
           <SparrowLogo />
           <div className="eyebrow">{t("login.eyebrow")}</div>
@@ -125,7 +149,47 @@ export function LoginScreen() {
     );
   }
 
+  /** Signs in with the password already in memory. Never throws. */
+  const signInWithMemoryPassword = async (): Promise<"ok" | "unconfirmed" | "failed"> => {
+    if (!password) return "failed";
+    try {
+      go(await auth.signInWithEmail(email.trim(), password));
+      return "ok";
+    } catch (err) {
+      if (err instanceof AuthError && err.code === "unconfirmed") return "unconfirmed";
+      return "failed";
+    }
+  };
+
+  const goToSignInWithBanner = () => {
+    setMode("signin");
+    setCode("");
+    setPassword("");
+    setError("");
+    setErrorDetail("");
+    setNotice(t("login.confirmedSignIn"));
+  };
+
+  const offerResend = () => {
+    setMode("confirm");
+    setError("");
+    setErrorDetail("");
+    setNotice(t("login.errorUnconfirmed"));
+  };
+
+  /**
+   * The account is confirmed. Try the in-memory password; on any failure fall
+   * back to a banner, except "not confirmed yet" which offers a resend.
+   */
+  const afterConfirmed = async (onUnconfirmed: "resend" | "banner") => {
+    const result = await signInWithMemoryPassword();
+    if (result === "ok") return;
+    if (result === "unconfirmed" && onUnconfirmed === "resend") offerResend();
+    else goToSignInWithBanner();
+  };
+
   const submitSignIn = async () => {
+    if (busy) return;
     if (!email.includes("@")) {
       setError(t("login.emailError"));
       return;
@@ -137,6 +201,7 @@ export function LoginScreen() {
     setBusy(true);
     clearDemoBeforeAuth();
     setError("");
+    setErrorDetail("");
     setNotice("");
     try {
       go(await auth.signInWithEmail(email.trim(), password));
@@ -145,7 +210,7 @@ export function LoginScreen() {
         setMode("confirm");
         setNotice(t("login.errorUnconfirmed"));
       } else {
-        setError(messageFor(err));
+        fail(err);
       }
     } finally {
       setBusy(false);
@@ -153,6 +218,7 @@ export function LoginScreen() {
   };
 
   const submitSignUp = async () => {
+    if (busy) return;
     if (!email.includes("@")) {
       setError(t("login.emailError"));
       return;
@@ -164,65 +230,92 @@ export function LoginScreen() {
     setBusy(true);
     clearDemoBeforeAuth();
     setError("");
+    setErrorDetail("");
     try {
       await auth.signUp(email.trim(), password);
       setMode("confirm");
+      setNotice("");
     } catch (err) {
-      setError(messageFor(err));
+      fail(err);
+      // Cognito returns its real password policy text on InvalidPasswordException.
+      if (err instanceof AuthError && err.code === "invalidPassword" && err.message && err.message !== err.code) {
+        setPasswordPolicy(err.message);
+      }
     } finally {
       setBusy(false);
     }
   };
 
   const submitCode = async () => {
-    if (code.trim().length < 6) {
+    if (busy) return;
+    const trimmed = code.replace(/\s+/g, "");
+    if (trimmed.length < 6) {
       setError(t("login.codeError"));
       return;
     }
     setBusy(true);
     setError("");
+    setErrorDetail("");
+    setNotice("");
     try {
-      await auth.confirmSignUp(email.trim(), code.trim());
-      go(await auth.signInWithEmail(email.trim(), password));
-    } catch (err) {
-      setError(messageFor(err));
+      try {
+        await auth.confirmSignUp(email.trim(), trimmed);
+      } catch (err) {
+        const name = err instanceof AuthError ? err.code : "unknown";
+        // Expired code or "already confirmed": the account may be usable — try
+        // the in-memory password before showing anything.
+        if (name === "expiredCode" || name === "alreadyConfirmed") {
+          await afterConfirmed("resend");
+          return;
+        }
+        fail(err);
+        return;
+      }
+      await afterConfirmed("banner");
     } finally {
       setBusy(false);
     }
   };
 
   const resendCode = async () => {
+    if (busy || resendIn > 0) return;
     setBusy(true);
     setError("");
+    setErrorDetail("");
     try {
       await auth.resendSignUpCode(email.trim());
+      setCode("");
       setNotice(t("login.resendSent"));
+      setResendIn(RESEND_COOLDOWN);
     } catch (err) {
-      setError(messageFor(err));
+      fail(err);
     } finally {
       setBusy(false);
     }
   };
 
   const submitForgot = async () => {
+    if (busy) return;
     if (!email.includes("@")) {
       setError(t("login.emailError"));
       return;
     }
     setBusy(true);
     setError("");
+    setErrorDetail("");
     try {
       await auth.resetPassword(email.trim());
       setMode("reset");
       setNotice(t("login.resetSent", { email: email.trim() }));
     } catch (err) {
-      setError(messageFor(err));
+      fail(err);
     } finally {
       setBusy(false);
     }
   };
 
   const submitReset = async () => {
+    if (busy) return;
     if (code.trim().length < 6) {
       setError(t("login.codeError"));
       return;
@@ -233,11 +326,12 @@ export function LoginScreen() {
     }
     setBusy(true);
     setError("");
+    setErrorDetail("");
     try {
       await auth.confirmResetPassword(email.trim(), code.trim(), newPassword);
       go(await auth.signInWithEmail(email.trim(), newPassword));
     } catch (err) {
-      setError(messageFor(err));
+      fail(err);
     } finally {
       setBusy(false);
     }
@@ -322,12 +416,14 @@ export function LoginScreen() {
               else {
                 setMode("signin");
                 setError("");
+                setErrorDetail("");
                 setNotice("");
                 setCode("");
+                setResendIn(0);
               }
             }}
           >
-            ← {mode === "signin" ? t("login.back") : t("login.backToSignIn")}
+            {ARROW} {mode === "signin" ? t("login.back") : t("login.backToSignIn")}
           </button>
         </div>
         <SparrowLogo />
@@ -337,7 +433,7 @@ export function LoginScreen() {
 
         {mode === "signin" || mode === "signup" ? emailField : null}
         {mode === "signin" || mode === "signup" ? passwordField : null}
-        {mode === "signup" ? <small className="field-hint">{t("login.passwordHint")}</small> : null}
+        {mode === "signup" ? <small className="field-hint">{passwordPolicy || t("login.passwordHint")}</small> : null}
         {mode === "confirm" ? codeField : null}
         {mode === "reset" ? codeField : null}
         {mode === "reset" ? (
@@ -357,6 +453,7 @@ export function LoginScreen() {
         ) : null}
 
         {error ? <div className="inline-error">{error}</div> : null}
+        {error && errorDetail ? <small className="field-hint">{t("login.errorDetails", { name: errorDetail })}</small> : null}
         {notice && !error ? <div className="figure-note">{notice}</div> : null}
 
         {mode === "signin" ? (
@@ -386,13 +483,13 @@ export function LoginScreen() {
         ) : null}
 
         {mode === "signin" ? (
-          <button type="button" className="text-button" onClick={() => { setMode("forgot"); setError(""); setNotice(""); }}>
+          <button type="button" className="text-button" onClick={() => { setMode("forgot"); setError(""); setErrorDetail(""); setNotice(""); }}>
             {t("login.forgot")}
           </button>
         ) : null}
         {mode === "confirm" ? (
-          <button type="button" className="text-button" disabled={busy} onClick={() => void resendCode()}>
-            {t("login.resend")}
+          <button type="button" className="text-button" disabled={busy || resendIn > 0} onClick={() => void resendCode()}>
+            {resendIn > 0 ? t("login.resendWait", { seconds: resendIn }) : t("login.resend")}
           </button>
         ) : null}
         {mode === "signin" || mode === "signup" ? (
@@ -402,6 +499,7 @@ export function LoginScreen() {
             onClick={() => {
               setMode(mode === "signin" ? "signup" : "signin");
               setError("");
+              setErrorDetail("");
               setNotice("");
             }}
           >

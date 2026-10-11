@@ -1,0 +1,243 @@
+/*
+ * Learn video grid + in-frame player.
+ *
+ * Every selector is scoped under `.learn-video`, so these rules only apply to
+ * the markup LearnTab renders (grid modifier `--grid`, player `--player`).
+ */
+
+.learn-video--grid {
+  margin: 0 0 26px;
+}
+
+.learn-video--grid .learn-video__head h2 {
+  margin: 0 0 4px;
+  font-family: "Baloo 2", system-ui, sans-serif;
+  font-size: 24px;
+}
+
+.learn-video--grid .learn-video__head p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.learn-video--grid .learn-video__filters {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 12px 0;
+  scrollbar-width: none;
+}
+
+.learn-video--grid .learn-video__filters::-webkit-scrollbar {
+  display: none;
+}
+
+.learn-video--grid .learn-video__filters button {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--forest);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.learn-video--grid .learn-video__filters button.is-on {
+  background: var(--forest);
+  border-color: var(--forest);
+  color: var(--white);
+}
+
+.learn-video--grid .learn-video__list {
+  display: grid;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.learn-video--grid .learn-video__card {
+  display: grid;
+  gap: 8px;
+}
+
+.learn-video--grid .learn-video__thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--soft);
+  cursor: pointer;
+}
+
+.learn-video--grid .learn-video__thumb img,
+.learn-video--grid .learn-video__poster-fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.learn-video--grid .learn-video__poster-fallback {
+  display: grid;
+  place-items: center;
+}
+
+.learn-video--grid .learn-video__play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--white);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+}
+
+.learn-video--grid .learn-video__duration {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(5, 10, 7, 0.82);
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.learn-video--grid .learn-video__soon {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--forest);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.learn-video--grid .learn-video__body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.learn-video--grid .learn-video__body strong {
+  font-size: 16px;
+}
+
+.learn-video--grid .learn-video__chip {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--forest);
+  font-size: 13px;
+}
+
+/* ---------- player ------------------------------------------------------ */
+.learn-video--player {
+  color: inherit;
+}
+
+.learn-video--player .learn-video__player {
+  display: grid;
+  gap: 10px;
+}
+
+.learn-video--player h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.learn-video--player .learn-video__meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.learn-video--player .learn-video__video {
+  width: 100%;
+  max-height: 70dvh;
+  object-fit: contain;
+  border-radius: 14px;
+  background: #0d1410;
+}
+
+.learn-video--player .learn-video__prompt,
+.learn-video--player .learn-video__error {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 18px;
+  border-radius: 14px;
+  background: var(--soft);
+}
+
+.learn-video--player .learn-video__prompt p,
+.learn-video--player .learn-video__error p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.learn-video--player .learn-video__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.learn-video--player .learn-video__link {
+  min-height: 48px;
+  padding: 0 6px;
+  border: 0;
+  background: none;
+  color: var(--forest);
+  font-size: 15px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.learn-video--player .learn-video__upnext h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: var(--forest);
+}
+
+.learn-video--player .learn-video__upnext ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.learn-video--player .learn-video__upnext button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--dark);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.learn-video--player .learn-video__upnext-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--leaf);
+}

@@ -1,23 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { SparrowMascot } from "../../components/SparrowMascot";
 import { Button } from "../../components/ui/Button";
 import { Sheet } from "../../components/ui/Sheet";
 import { api } from "../../lib/api";
-import type { CommunityComment, CommunityPost, CommunityTag, ReactionType, ReportReason } from "../../lib/api/data";
+import type { CommunityPost, CommunityTag, ReactionType, ReportReason } from "../../lib/api/data";
 import { HttpError } from "../../lib/api/http";
 import { compressBillPhoto } from "../../lib/photos";
 import { useAuth } from "../../lib/AuthProvider";
+import { CommentsSheet } from "./community/CommentsSheet";
+import { ReelsStage } from "./community/ReelsStage";
+import { COMMUNITY_TAGS } from "./community/tags";
+import "../../styles/community-reels.css";
 
-const TAGS: CommunityTag[] = ["energy_saving", "solar", "trees", "waste", "water", "community_drive", "other"];
-const REACTIONS: ReactionType[] = ["grow", "sun", "cheer", "love", "idea"];
 const NAME_RE = /^[\p{L}\p{N} .\-_']+$/u;
-
-function relativeTime(value: string): string {
-  const hours = Math.max(0, Math.round((Date.now() - Date.parse(value)) / 3600000));
-  return hours < 1 ? "now" : hours === 1 ? "1h" : `${hours}h`;
-}
 
 export function CommunityTab({ demo, onSignUp }: { demo: boolean; onSignUp: () => void }) {
   const { t } = useTranslation();
@@ -26,6 +22,7 @@ export function CommunityTab({ demo, onSignUp }: { demo: boolean; onSignUp: () =
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const cursorRef = useRef<string | null>(null);
+  const loadingMore = useRef(false);
   const [filter, setFilter] = useState<CommunityTag | "all">("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<HttpError | null>(null);
@@ -46,6 +43,24 @@ export function CommunityTab({ demo, onSignUp }: { demo: boolean; onSignUp: () =
   const [toast, setToast] = useState("");
   const [unavailable, setUnavailable] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const page = pageRef.current;
+    if (!page) return;
+    const measure = () => {
+      const before = page.previousElementSibling as HTMLElement | null;
+      const offset = before && before.classList.contains("demo-banner") ? before.offsetHeight : 0;
+      page.style.setProperty("--reels-chrome", `${offset}px`);
+    };
+    measure();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    const before = page.previousElementSibling;
+    if (observer && before) observer.observe(before);
+    window.addEventListener("resize", measure);
+    return () => { observer?.disconnect(); window.removeEventListener("resize", measure); };
+  }, [demo]);
+
   const openCreate = () => {
     if (demo) { onSignUp(); return; }
     const key = `sparrow.community.guidelines.${profile?.user.id ?? "unknown"}`;
@@ -56,6 +71,7 @@ export function CommunityTab({ demo, onSignUp }: { demo: boolean; onSignUp: () =
       setCreateOpen(true);
     }
   };
+
   const choosePhoto = async (file: File | undefined) => {
     if (!file) return;
     setPhotoError(false);
@@ -85,7 +101,9 @@ export function CommunityTab({ demo, onSignUp }: { demo: boolean; onSignUp: () =
       setLoading(false);
     }
   }, [t]);
+
   useEffect(() => { void load(); }, [demo, load]);
+
   useEffect(() => {
     const id = new URLSearchParams(location.search).get("post");
     if (!id) return;
@@ -96,6 +114,7 @@ export function CommunityTab({ demo, onSignUp }: { demo: boolean; onSignUp: () =
   }, [location.search, t]);
 
   const visible = useMemo(() => filter === "all" ? posts : posts.filter((post) => post.tag === filter), [filter, posts]);
+
   const handleCommunityError = useCallback((err: unknown, postId?: string) => {
     const apiError = err instanceof HttpError ? err : new HttpError(0, t("community.networkError"), "network_error");
     if (apiError.status === 404 || apiError.errorCode === "not_found") {
@@ -108,7 +127,8 @@ export function CommunityTab({ demo, onSignUp }: { demo: boolean; onSignUp: () =
       setError(apiError);
     }
   }, [t]);
-  const react = async (post: CommunityPost, next: ReactionType | null) => {
+
+  const react = useCallback(async (post: CommunityPost, next: ReactionType | null) => {
     const before = post;
     setPosts((items) => items.map((item) => item.id === post.id ? { ...item, myReaction: next, reactionCounts: { ...item.reactionCounts, ...(post.myReaction ? { [post.myReaction]: Math.max(0, post.reactionCounts[post.myReaction] - 1) } : {}), ...(next ? { [next]: post.reactionCounts[next] + 1 } : {}) } } : item));
     try {
@@ -118,7 +138,37 @@ export function CommunityTab({ demo, onSignUp }: { demo: boolean; onSignUp: () =
       setPosts((items) => items.map((item) => item.id === post.id ? before : item));
       handleCommunityError(err, post.id);
     }
-  };
+  }, [handleCommunityError]);
+
+  const doubleTap = useCallback((post: CommunityPost) => {
+    if (post.myReaction === "love") return;
+    void react(post, "love");
+  }, [react]);
+
+  const share = useCallback((post: CommunityPost) => {
+    const link = `${window.location.origin}/app/community?post=${encodeURIComponent(post.id)}`;
+    const text = `${post.caption.slice(0, 80)}\n${link}`;
+    if (navigator.share) {
+      void navigator.share({ text, url: link }).catch(() => undefined);
+    } else if (navigator.clipboard) {
+      void navigator.clipboard.writeText(link).then(() => { setToast(t("community.linkCopied")); window.setTimeout(() => setToast(""), 2000); }).catch((err) => handleCommunityError(err));
+    } else {
+      setToast(t("community.linkCopied"));
+    }
+  }, [handleCommunityError, t]);
+
+  const removePost = useCallback((post: CommunityPost) => {
+    void api.data.community.deleteCommunityPost(post.id)
+      .then(() => setPosts((items) => items.filter((item) => item.id !== post.id)))
+      .catch((err) => handleCommunityError(err, post.id));
+  }, [handleCommunityError]);
+
+  const loadMore = useCallback(() => {
+    if (loadingMore.current || !cursorRef.current) return;
+    loadingMore.current = true;
+    void load(true).finally(() => { loadingMore.current = false; });
+  }, [load]);
+
   const create = async () => {
     if (demo) { onSignUp(); return; }
     if (!photo || !caption.trim() || !adult) return;
@@ -156,44 +206,29 @@ export function CommunityTab({ demo, onSignUp }: { demo: boolean; onSignUp: () =
   };
 
   return (
-    <div className="page community-page">
+    <div className="community-page community-reels--page" ref={pageRef}>
       {toast ? <div className="toast" role="status">{toast}</div> : null}
-      <div className="page-heading">
-        <div><h1>{t("community.title")}</h1><p>{t("community.purpose")}</p></div>
-        <Button size="sm" onClick={openCreate}>{t("community.postButton")}</Button>
-      </div>
-      {demo ? <p className="sample-note">{t("community.demoBanner")}</p> : null}
-      <div className="community-tags" aria-label={t("community.filterLabel")}>
-        <button type="button" className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>{t("community.all")}</button>
-        {TAGS.map((entry) => <button type="button" className={filter === entry ? "active" : ""} key={entry} onClick={() => setFilter(entry)}>{t(`community.tags.${entry}`)}</button>)}
-      </div>
-      <div className="community-actions"><Button variant="quiet" size="sm" onClick={() => void load()}>{t("community.refresh")}</Button></div>
-      {loading && posts.length === 0 ? <div className="community-skeleton" aria-busy="true" /> : null}
-      {error ? <div className="error-state"><strong>{t("community.error")}</strong><span>{t("community.details", { status: error.status, code: error.errorCode })}</span><Button size="sm" onClick={() => void load()}>{t("common.retry")}</Button></div> : null}
-      {unavailable ? <div className="empty-state"><strong>{t("community.unavailable")}</strong></div> : null}
-      {!unavailable && !loading && !error && visible.length === 0 ? <div className="empty-state"><SparrowMascot /><strong>{t("community.empty")}</strong></div> : null}
-      <div className="community-feed">
-        {visible.map((post) => <article className="community-card" key={post.id}>
-          <header><span className="community-avatar">{post.authorName.charAt(0).toUpperCase()}</span><div><strong>{post.authorName}</strong><small>{t(`community.tags.${post.tag}`)} · {relativeTime(post.createdAt)}</small></div><button type="button" aria-label={t("community.menu")} onClick={() => post.isMine ? void api.data.community.deleteCommunityPost(post.id).then(() => setPosts((items) => items.filter((item) => item.id !== post.id))).catch((err) => handleCommunityError(err, post.id)) : setReportPost(post)}>...</button></header>
-          {post.photoUrl ? <img className="community-photo" src={post.photoUrl} alt="" /> : <div className="community-illustration"><SparrowMascot size={64} /></div>}
-          {post.status === "hidden" ? <div className="sample-note">{t("community.hidden")}</div> : null}
-          <p>{post.caption}</p>
-          <div className="community-reactions">{REACTIONS.map((type) => <button type="button" key={type} aria-label={t(`community.reactions.${type}`)} aria-pressed={post.myReaction === type} onClick={() => void react(post, post.myReaction === type ? null : type)}>{t(`community.reactions.${type}`)} <span>{post.reactionCounts[type]}</span></button>)}</div>
-          <button className="community-comments-link" type="button" onClick={() => setCommentsPost(post)}>{t("community.comments", { count: post.commentCount })}</button>
-          <button className="community-comments-link" type="button" onClick={() => {
-            const link = `${window.location.origin}/app/community?post=${encodeURIComponent(post.id)}`;
-            const text = `${post.caption.slice(0, 80)}\n${link}`;
-            if (navigator.share) {
-              void navigator.share({ text, url: link }).catch(() => undefined);
-            } else if (navigator.clipboard) {
-              void navigator.clipboard.writeText(link).then(() => { setToast(t("community.linkCopied")); window.setTimeout(() => setToast(""), 2000); }).catch((err) => handleCommunityError(err));
-            } else {
-              setToast(t("community.linkCopied"));
-            }
-          }}>{t("community.share")}</button>
-        </article>)}
-      </div>
-      {cursor ? <Button variant="quiet" wide onClick={() => void load(true)}>{t("community.loadMore")}</Button> : null}
+
+      <ReelsStage
+        posts={visible}
+        tag={filter}
+        onTag={setFilter}
+        demo={demo}
+        loading={loading}
+        error={error}
+        emptyLabel={unavailable ? t("community.unavailable") : t("community.empty")}
+        onRetry={() => void load()}
+        onCreate={openCreate}
+        cursor={cursor}
+        onLoadMore={loadMore}
+        onReact={(post, next) => void react(post, next)}
+        onDoubleTap={doubleTap}
+        onComments={setCommentsPost}
+        onShare={share}
+        onReport={setReportPost}
+        onDelete={removePost}
+      />
+
       <Sheet open={Boolean(reportPost)} onClose={() => setReportPost(null)} label={t("community.reportTitle")} closeLabel={t("common.close")}>
         <h2>{t("community.reportTitle")}</h2>
         {(["spam", "inappropriate", "unsafe", "other"] as ReportReason[]).map((reason) => <Button key={reason} variant="quiet" wide onClick={() => {
@@ -201,9 +236,11 @@ export function CommunityTab({ demo, onSignUp }: { demo: boolean; onSignUp: () =
           setReportPost(null);
         }}>{t(`community.report.${reason}`)}</Button>)}
       </Sheet>
+
       <Sheet open={Boolean(commentsPost)} onClose={() => setCommentsPost(null)} label={t("community.commentsTitle")} closeLabel={t("common.close")}>
-        <Comments post={commentsPost} onError={handleCommunityError} />
+        <CommentsSheet post={commentsPost} onError={handleCommunityError} />
       </Sheet>
+
       <Sheet open={createOpen} onClose={() => setCreateOpen(false)} label={t("community.createTitle")} closeLabel={t("common.close")} sheetClassName="sheet community-create-sheet">
         {nameStep ? <div className="community-name-step">
           <h2>{t("community.nameTitle")}</h2>
@@ -235,7 +272,7 @@ export function CommunityTab({ demo, onSignUp }: { demo: boolean; onSignUp: () =
           <textarea id="community-caption" value={caption} maxLength={500} placeholder={t("community.captionPlaceholder")} onChange={(event) => setCaption(event.target.value)} />
           <small className="field-hint community-counter">{caption.length}/500</small>
           <span className="community-field-label">{t("community.topicLabel")}</span>
-          <div className="community-tags community-create-tags">{TAGS.map((entry) => <button type="button" className={tag === entry ? "active" : ""} key={entry} onClick={() => setTag(entry)}>{t(`community.tags.${entry}`)}</button>)}</div>
+          <div className="community-tags community-create-tags">{COMMUNITY_TAGS.map((entry) => <button type="button" className={tag === entry ? "active" : ""} key={entry} onClick={() => setTag(entry)}>{t(`community.tags.${entry}`)}</button>)}</div>
           <label className="community-check"><input type="checkbox" checked={adult} onChange={(event) => setAdult(event.target.checked)} /><span>{t("community.adult")}</span></label>
           <p className="sample-note">{t("community.consent")}</p>
           <button type="button" className="community-link" onClick={() => setGuidelinesOpen(true)}>{t("community.guidelinesLink")}</button>
@@ -243,18 +280,10 @@ export function CommunityTab({ demo, onSignUp }: { demo: boolean; onSignUp: () =
         <div className="community-create-footer"><Button wide disabled={posting || !photo || !caption.trim() || !adult} onClick={() => void create()}>{posting ? t("community.posting") : t("community.publish")}</Button></div>
         </div>}
       </Sheet>
+
       <Sheet open={guidelinesOpen} onClose={() => setGuidelinesOpen(false)} label={t("community.guidelinesTitle")} closeLabel={t("common.close")}>
         <h2>{t("community.guidelinesTitle")}</h2><p>{t("community.guidelinesCopy")}</p><Button wide onClick={() => { setGuidelinesOpen(false); if (!demo) setCreateOpen(true); }}>{t("community.continue")}</Button>
       </Sheet>
     </div>
   );
-}
-
-function Comments({ post, onError }: { post: CommunityPost | null; onError: (error: unknown, postId?: string) => void }) {
-  const { t } = useTranslation();
-  const [comments, setComments] = useState<CommunityComment[]>([]);
-  const [text, setText] = useState("");
-  useEffect(() => { if (post) void api.data.community.getCommunityComments(post.id).then((result) => setComments(result.comments)).catch((err) => onError(err, post.id)); }, [post, onError]);
-  if (!post) return null;
-  return <div><h2>{t("community.commentsTitle")}</h2>{comments.map((comment) => <p key={comment.id}><strong>{comment.authorName}</strong> {comment.text} {(comment.isMine || post.isMine) ? <button type="button" onClick={() => void api.data.community.deleteCommunityComment(post.id, comment.id).then(() => setComments((items) => items.filter((item) => item.id !== comment.id))).catch((err) => onError(err, post.id))}>{t("community.deleteComment")}</button> : null}</p>)}<textarea maxLength={300} value={text} onChange={(event) => setText(event.target.value)} /><Button wide disabled={!text.trim()} onClick={() => void api.data.community.addCommunityComment(post.id, text.trim()).then((comment) => { setComments((items) => [...items, comment]); setText(""); }).catch((err) => onError(err, post.id))}>{t("community.send")}</Button></div>;
 }

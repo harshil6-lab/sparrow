@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
+    "typecheck:tests": "tsc -p tsconfig.test.json",
     "test:watch": "vitest",
     "test:contrast": "node scripts/contrast.mjs",
     "test:layout": "node scripts/layout-check.mjs",

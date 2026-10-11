@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../components/ui/Button";
@@ -9,6 +9,7 @@ import { useLanguage } from "../lib/LanguageProvider";
 import { useAuth } from "../lib/AuthProvider";
 import { nextRoute } from "../lib/types";
 import { languageMeta } from "../i18n/languages";
+import { USE_MOCK } from "../lib/env";
 
 /**
  * Splash: falling-leaves animation, the sparrow glides in and lands on the wire,
@@ -19,6 +20,26 @@ import { languageMeta } from "../i18n/languages";
  * "Enter Sparrow" continues to the user's gate: the app for a returning user,
  * the story/setup flow otherwise.
  */
+
+/**
+ * Cognito's Hosted UI returns to "/" with ?code=... (or ?error=... on failure).
+ * While that query is present the splash must NOT redirect or strip the query:
+ * Amplify needs the URL intact to complete the code exchange. We show a
+ * "Signing you in..." state, wait for the Hub exchange, then route by profile.
+ */
+const OAUTH_RETURN = /[?&](code|error|error_description)=/;
+
+function hasOAuthReturn(): boolean {
+  return typeof window !== "undefined" && OAUTH_RETURN.test(window.location.search);
+}
+
+/** Drops the one-time OAuth params without adding a history entry. */
+function clearOAuthParams(): void {
+  if (typeof window === "undefined") return;
+  const { origin, pathname, hash } = window.location;
+  window.history.replaceState(window.history.state, "", `${origin}${pathname}${hash}`);
+}
+
 /**
  * Leaves scale with viewport width: 36 at <900px (unchanged from the mobile
  * baseline) up to the 60 maximum on wide desktops.
@@ -40,23 +61,32 @@ function useSplashLeafCount(): number {
 export function SplashScreen() {
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
-  const { ready, profile } = useAuth();
+  const { ready, profile, completeOAuthRedirect } = useAuth();
   const [picker, setPicker] = useState(false);
+  const [oauth, setOauth] = useState<"none" | "pending" | "error">(() => (hasOAuthReturn() ? "pending" : "none"));
+  const [oauthDetail, setOauthDetail] = useState("");
+  const started = useRef(false);
   const navigate = useNavigate();
   const leafCount = useSplashLeafCount();
 
-  /**
-   * Cognito's Hosted UI (Google) returns to "/" with ?code=... . Amplify
-   * exchanges it during hydration; once the profile is ready we continue
-   * straight through the same gate as any other sign-in instead of waiting for
-   * a tap. An ?error=... return simply falls through to /login.
-   */
-  const oauthReturn =
-    typeof window !== "undefined" && /[?&](code|error)=/.test(window.location.search);
-
   useEffect(() => {
-    if (oauthReturn && ready) navigate(nextRoute(profile), { replace: true });
-  }, [oauthReturn, ready, profile, navigate]);
+    if (oauth === "none" || started.current) return;
+    started.current = true;
+    void (async () => {
+      const result = await completeOAuthRedirect();
+      clearOAuthParams();
+      if (result.profile) {
+        navigate(nextRoute(result.profile), { replace: true });
+        return;
+      }
+      if (result.error) {
+        setOauthDetail(result.error);
+        setOauth("error");
+        return;
+      }
+      setOauth("none");
+    })();
+  }, [oauth, completeOAuthRedirect, navigate]);
 
   const enter = () => {
     if (ready && profile) {
@@ -65,6 +95,30 @@ export function SplashScreen() {
     }
     navigate("/welcome");
   };
+
+  if (oauth === "pending") {
+    return (
+      <main className="splash" aria-busy="true">
+        <SplashScene leafCount={leafCount} />
+        <div className="splash-wordmark">{t("splash.wordmark")}</div>
+        <p role="status">{t("splash.signingIn")}</p>
+      </main>
+    );
+  }
+
+  if (oauth === "error") {
+    return (
+      <main className="splash">
+        <SplashScene leafCount={leafCount} />
+        <div className="splash-wordmark">{t("splash.wordmark")}</div>
+        <p className="figure-note">{t("splash.oauthError")}</p>
+        {!USE_MOCK && oauthDetail ? <small>{t("splash.oauthDetails", { detail: oauthDetail })}</small> : null}
+        <Button variant="sun" className="splash-enter" icon="arrow" onClick={() => navigate("/login", { replace: true })}>
+          {t("splash.oauthContinue")}
+        </Button>
+      </main>
+    );
+  }
 
   return (
     <main className="splash">
@@ -79,5 +133,3 @@ export function SplashScreen() {
     </main>
   );
 }
-
-

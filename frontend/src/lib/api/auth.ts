@@ -18,6 +18,8 @@ export type AuthErrorCode =
   | "badCode"
   | "expiredCode"
   | "unconfirmed"
+  | "alreadyConfirmed"
+  | "userNotFound"
   | "invalidPassword"
   | "limit"
   | "network"
@@ -25,11 +27,17 @@ export type AuthErrorCode =
 
 export class AuthError extends Error {
   readonly code: AuthErrorCode;
+  /**
+   * The original provider error name (e.g. "CodeMismatchException"), kept so
+   * real mode can show it in the "Details" line. Never rendered in mock mode.
+   */
+  readonly detail?: string;
 
-  constructor(code: AuthErrorCode, message?: string) {
+  constructor(code: AuthErrorCode, message?: string, detail?: string) {
     super(message ?? code);
     this.name = "AuthError";
     this.code = code;
+    this.detail = detail;
   }
 }
 
@@ -58,6 +66,11 @@ export interface AuthProvider {
   confirmResetPassword(email: string, code: string, password: string): Promise<void>;
   /** Google federated sign-in. Mock mode simulates it; real mode redirects. */
   signInWithGoogle(): Promise<AuthResult>;
+  /**
+   * Completes an OAuth (Google) redirect return. Awaits the code exchange and
+   * resolves with the signed-in user, or a friendly error string on failure.
+   */
+  completeOAuthRedirect(): Promise<{ user: User | null; error: string | null }>;
   signOut(): Promise<void>;
   /** ID token for the API's `Authorization` header. Null in mock mode. */
   idToken(): Promise<string | null>;
