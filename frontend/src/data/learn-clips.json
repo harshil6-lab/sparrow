@@ -1,10 +1,46 @@
 [
-  { "id": "learn-01-ac", "factId": "ac_setpoint", "title": "AC with a fan", "category": "Cooling", "src": "/learn/learn-01-ac.mp4", "poster": "/learn/learn-01-ac.jpg", "captions": "/learn/learn-01-ac.vtt", "captionsLang": "en", "durationSec": 30 },
-  { "id": "learn-02-standby", "factId": "standby_power", "title": "The standby sweep", "category": "Standby", "src": "/learn/learn-02-standby.mp4", "poster": "/learn/learn-02-standby.jpg", "captions": "/learn/learn-02-standby.vtt", "captionsLang": "en", "durationSec": 30 },
-  { "id": "learn-03-led", "factId": "led_swap", "title": "Swap to LED", "category": "Lighting", "src": "/learn/learn-03-led.mp4", "poster": "/learn/learn-03-led.jpg", "captions": "/learn/learn-03-led.vtt", "captionsLang": "en", "durationSec": 30 },
-  { "id": "learn-04-fridge", "factId": "fridge_door", "title": "The fridge door", "category": "Kitchen", "src": "/learn/learn-04-fridge.mp4", "poster": "/learn/learn-04-fridge.jpg", "captions": "/learn/learn-04-fridge.vtt", "captionsLang": "en", "durationSec": 30 },
-  { "id": "learn-05-geyser", "factId": "geyser_use", "title": "Heat only what you need", "category": "Hot water", "src": "/learn/learn-05-geyser.mp4", "poster": "/learn/learn-05-geyser.jpg", "captions": "/learn/learn-05-geyser.vtt", "captionsLang": "en", "durationSec": 30 },
-  { "id": "learn-06-daylight", "factId": "curtains_daylight", "title": "Open the curtains first", "category": "Daylight", "src": "/learn/learn-06-daylight.mp4", "poster": "/learn/learn-06-daylight.jpg", "captions": "/learn/learn-06-daylight.vtt", "captionsLang": "en", "durationSec": 30 },
-  { "id": "learn-07-bill", "factId": "reading_bill", "title": "Reading your bill", "category": "Bills", "src": "/learn/learn-07-bill.mp4", "poster": "/learn/learn-07-bill.jpg", "captions": "/learn/learn-07-bill.vtt", "captionsLang": "en", "durationSec": 30 },
-  { "id": "learn-08-proof", "factId": "how_sparrow_proves", "title": "How Sparrow proves it", "category": "Proof", "src": "/learn/learn-08-proof.mp4", "poster": "/learn/learn-08-proof.jpg", "captions": "/learn/learn-08-proof.vtt", "captionsLang": "en", "durationSec": 30 }
+    {
+        "id":  "learn-01-ac",
+        "factId":  "ac_setpoint",
+        "title":  "AC with a fan",
+        "category":  "Cooling",
+        "src":  "/learn/learn-01-ac.mp4",
+        "poster":  "/learn/learn-01-ac.jpg",
+        "captions":  "/learn/learn-01-ac.vtt",
+        "captionsLang":  "en",
+        "durationSec":  30
+    },
+    {
+        "id":  "learn-02-standby",
+        "factId":  "standby_power",
+        "title":  "The standby sweep",
+        "category":  "Standby",
+        "src":  "/learn/learn-02-standby.mp4",
+        "poster":  "/learn/learn-02-standby.jpg",
+        "captions":  "/learn/learn-02-standby.vtt",
+        "captionsLang":  "en",
+        "durationSec":  30
+    },
+    {
+        "id":  "learn-03-led",
+        "factId":  "led_swap",
+        "title":  "Swap to LED",
+        "category":  "Lighting",
+        "src":  "/learn/learn-03-led.mp4",
+        "poster":  "/learn/learn-03-led.jpg",
+        "captions":  "/learn/learn-03-led.vtt",
+        "captionsLang":  "en",
+        "durationSec":  30
+    },
+    {
+        "id":  "learn-04-fridge",
+        "factId":  "fridge_door",
+        "title":  "The fridge door",
+        "category":  "Kitchen",
+        "src":  "/learn/learn-04-fridge.mp4",
+        "poster":  "/learn/learn-04-fridge.jpg",
+        "captions":  "/learn/learn-04-fridge.vtt",
+        "captionsLang":  "en",
+        "durationSec":  30
+    }
 ]
