@@ -109,15 +109,16 @@ export function ProfileSheet({
         onClose={onClose}
         label={t("profile.title")}
         sheetClassName="settings-sheet"
-        closeLabel={t("profile.close")}
       >
         <div className="sheet-head profile-sheet-head">
           <div>
             <span>{demo ? t("profile.demoName") : profile?.user.displayName ?? t("app.nestName")}</span>
-            <h2>{t("profile.title")}</h2>
+            <div className="profile-sheet-title-row">
+              <h2>{t("profile.title")}</h2>
+              <button type="button" aria-label={t("profile.close")} onClick={onClose}><Icon name="arrow" /></button>
+            </div>
             <small>{t("profile.signedInAs", { email: demo ? t("profile.demoName") : profile?.user.email ?? "" })}</small>
           </div>
-          <button type="button" aria-label={t("profile.close")} onClick={onClose}><Icon name="close" /></button>
         </div>
         {rows.map((row) => (
           <button key={row.key} type="button" aria-label={row.label} onClick={row.action}>

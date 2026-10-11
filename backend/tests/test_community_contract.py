@@ -49,6 +49,16 @@ def test_valid_community_contract_examples_accepted(call, dynamo):
     assert status == 200
     assert body["text"] == comment["text"]
 
+    short = CONTRACT["valid"]["commentShort"]
+    status, body, _ = call(
+        "POST",
+        "/community/posts/{id}/comments",
+        path_params={"id": post_id},
+        body=short,
+    )
+    assert status == 200
+    assert body["text"] == short["text"]
+
     report = CONTRACT["valid"]["report"]
     assert (
         call(
@@ -96,6 +106,54 @@ def test_invalid_reaction_contract_examples_rejected(call, dynamo, example):
         "/community/posts/{id}/reaction",
         path_params={"id": post_id},
         body=example["reaction"],
+    )
+    assert status == 400
+    assert resp["code"] == "validation_error"
+
+
+def test_comment_short_text_is_accepted_without_a_display_name(call, dynamo):
+    """A comment body is {text}; the account's display name must not 400 it.
+
+    The regression: a signed-in user who never created a post had no stored
+    displayName, so POST /community/posts/{id}/comments answered 400
+    ``needs_display_name`` for the contract body ``{"text": "hi"}``.
+    """
+    import os
+
+    os.environ["MODERATION_MODE"] = "off"
+    _display_name(call)  # user-a authors the post
+    _seed_photo(store.s3())
+    status, created, _ = call("POST", "/community/posts", body=CONTRACT["valid"]["post"])
+    assert status == 200
+
+    body = CONTRACT["valid"]["commentShort"]
+    status, comment, _ = call(
+        "POST",
+        "/community/posts/{id}/comments",
+        sub="user-b",  # never set a display name
+        path_params={"id": created["id"]},
+        body=body,
+    )
+    assert status == 200
+    assert comment["text"] == body["text"]
+    assert comment["authorName"]
+
+
+@pytest.mark.parametrize("example", [e for e in CONTRACT["invalid"] if "report" in e])
+def test_invalid_report_contract_examples_rejected(call, dynamo, example):
+    import os
+
+    os.environ["MODERATION_MODE"] = "off"
+    _display_name(call)
+    _seed_photo(store.s3())
+    status, created, _ = call("POST", "/community/posts", body=CONTRACT["valid"]["post"])
+    assert status == 200
+    status, resp, _ = call(
+        "POST",
+        "/community/posts/{id}/report",
+        sub="user-b",
+        path_params={"id": created["id"]},
+        body=example["report"],
     )
     assert status == 400
     assert resp["code"] == "validation_error"

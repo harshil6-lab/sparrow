@@ -46,7 +46,8 @@ try {
       await page.goto("http://127.0.0.1:4174/welcome");
       await page.getByRole("button", { name: "Try with sample data" }).click();
       await page.goto(`http://127.0.0.1:4174${route}`);
-      await page.locator("header").getByRole("button", { name: "Open profile" }).click();
+      const profileButton = page.getByRole("button", { name: "Open profile" }).first();
+      await profileButton.click();
       const count = await page.locator("button, a, [role=button]").count();
       for (let index = 0; index < count; index += 1) {
         const control = page.locator("button, a, [role=button]").nth(index);

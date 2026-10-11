@@ -27,6 +27,7 @@ import { TabError, TabLoading } from "./TabState";
 import { TAB_PATHS, navItems, tabFromPath, type TabId } from "./tabs";
 import { clearDemo } from "../../lib/demo";
 import { resetApi } from "../../lib/api";
+import "../../styles/shell.css";
 
 type Overlay =
   | "sweep"
@@ -286,9 +287,10 @@ export function AppShell() {
 
   return (
     <div className="app-shell" data-app-frame ref={frameRef}>
-      <aside className="side-nav">
+      <SheetPortalContext.Provider value={frameEl}>
+        <aside className="side-nav">
         <SparrowLogo />
-        <nav>
+        <nav aria-label={t("app.sidebarLabel")}>
           {items.map((item) => (
             <button
               key={item.id}
@@ -302,8 +304,13 @@ export function AppShell() {
             </button>
           ))}
         </nav>
-        <button type="button" className="side-settings" onClick={() => setProfileOpen(true)}>
-          <Icon name="settings" /> {t("app.profileTitle")}
+        <button type="button" className="side-profile" aria-label={t("app.openProfile")} onClick={() => setProfileOpen(true)}>
+          <span className="side-profile__avatar" aria-hidden="true">{initials}</span>
+          <span className="side-profile__copy">
+            <strong>{profile?.user.displayName || profile?.user.email || t("app.profileTitle")}</strong>
+            <small>{profile?.user.email || t("app.profileTitle")}</small>
+          </span>
+          <Icon name="settings" />
         </button>
       </aside>
 
@@ -358,8 +365,7 @@ export function AppShell() {
         ))}
       </nav>
 
-      <SheetPortalContext.Provider value={frameEl}>
-        <ProfileSheet
+      <ProfileSheet
           open={profileOpen}
           onClose={() => setProfileOpen(false)}
           wifiOnly={settings.wifiOnly}

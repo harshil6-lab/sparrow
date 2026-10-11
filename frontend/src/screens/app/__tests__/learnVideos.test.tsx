@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import i18n from "../../../i18n";
 import { LearnTab } from "../LearnTab";
+import { ClipPlayerSheet } from "../learn/ClipPlayerSheet";
 import type { FactCard } from "../../../lib/learn";
 
 const h = vi.hoisted(() => ({ wifiOnly: false }));
@@ -107,5 +108,30 @@ describe("Learn watch grid", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Play clip" }));
     await waitFor(() => expect(document.querySelector(".learn-video__video")).not.toBeNull());
+  });
+
+  it("renders no track element when the clip has no captions key", () => {
+    const noCaptionsClip = {
+      id: "learn-no-cap",
+      title: "No Captions Clip",
+      category: "Cooling" as const,
+      src: "/learn/test.mp4",
+      poster: "/learn/test.jpg",
+      durationSec: 30,
+    };
+    render(
+      <ClipPlayerSheet
+        clip={noCaptionsClip}
+        cellular={false}
+        upNext={[]}
+        relatedId={null}
+        onClose={vi.fn()}
+        onRelated={vi.fn()}
+        onPlayClip={vi.fn()}
+      />
+    );
+    const video = document.querySelector(".learn-video__video");
+    expect(video).not.toBeNull();
+    expect(video?.querySelector("track")).toBeNull();
   });
 });

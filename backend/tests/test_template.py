@@ -7,6 +7,7 @@ in-place update) and every role is scoped to that one table.
 """
 
 import ast
+import re
 
 from pathlib import Path
 
@@ -117,7 +118,7 @@ def test_functions_are_scoped_to_the_table(template):
             else:
                 assert "*" not in resources_for_statement
             assert not any(action.endswith(":*") for action in statement["Action"])
-            if name not in ("PhotoFn", "CommunityFn") and "s3:" not in str(statement["Action"]):
+            if name not in ("PhotoFn", "CommunityFn", "DeleteMeFn") and "s3:" not in str(statement["Action"]):
                 assert "HouseholdsTable.Arn" in str(statement["Resource"])
             if name == "CommunityFn" and "dynamodb:" in str(statement["Action"]):
                 assert "CommunityTable.Arn" in str(statement["Resource"]) or "HouseholdsTable.Arn" in str(statement["Resource"])
@@ -126,7 +127,9 @@ def test_functions_are_scoped_to_the_table(template):
             "dynamodb:GetItem",
             "dynamodb:PutItem",
             "dynamodb:Query",
+            "dynamodb:UpdateItem",
             "dynamodb:DeleteItem",
+            "dynamodb:ConditionCheckItem",
             "dynamodb:BatchWriteItem",
             "dynamodb:TransactWriteItems",
             "s3:PutObject",
@@ -293,5 +296,149 @@ def test_photo_roles_are_scoped_to_user_prefix(template):
     photo = template["Resources"]["PhotoFn"]["Properties"]["Policies"][0]["Statement"]
     delete = template["Resources"]["DeleteMeFn"]["Properties"]["Policies"][0]["Statement"]
     for statement in photo + delete:
-        assert "*" not in str(statement["Resource"]) or "u/*" in str(statement["Resource"])
+        entries = statement["Resource"] if isinstance(statement["Resource"], list) else [statement["Resource"]]
+        text = " ".join(str(entry) for entry in entries)
+        # A wildcard is only ever a documented scope: an S3 object prefix or a
+        # DynamoDB secondary-index path. A bare "*" resource is never allowed.
+        assert "*" not in text or "u/*" in text or "/index/*" in text, (
+            f"unscoped resource for {statement['Action']}: {text}"
+        )
     assert "s3:*" not in str(photo + delete)
+
+
+#: A DynamoDB client method and the IAM action it needs.
+DYNAMO_METHOD_ACTIONS = {
+    "get_item": "dynamodb:GetItem",
+    "put_item": "dynamodb:PutItem",
+    "delete_item": "dynamodb:DeleteItem",
+    "update_item": "dynamodb:UpdateItem",
+    "query": "dynamodb:Query",
+    "scan": "dynamodb:Scan",
+    "batch_write_item": "dynamodb:BatchWriteItem",
+}
+#: TransactWriteItems needs its own action *and* the item action for each member.
+TRANSACT_MEMBER_ACTIONS = {
+    "Put": "dynamodb:PutItem",
+    "Update": "dynamodb:UpdateItem",
+    "Delete": "dynamodb:DeleteItem",
+    "ConditionCheck": "dynamodb:ConditionCheckItem",
+}
+S3_METHOD_ACTIONS = {
+    "generate_presigned_post": "s3:PutObject",
+    "generate_presigned_url": "s3:GetObject",
+    "head_object": "s3:GetObject",
+    "list_objects_v2": "s3:ListBucket",
+    "delete_objects": "s3:DeleteObject",
+    "delete_object": "s3:DeleteObject",
+}
+#: Imported module name -> file. store.py only ever calls HouseholdsTable;
+#: community.py only ever calls CommunityTable (its household reads go through
+#: store.ensure_profile, which resolves back into store.py).
+BACKEND_MODULES = {"store": "store.py", "community_store": "community.py"}
+MODULE_TABLE = {"store.py": "HouseholdsTable", "community.py": "CommunityTable"}
+TABLE_ENV = {"HouseholdsTable": "TABLE", "CommunityTable": "COMMUNITY_TABLE"}
+
+
+def _module_functions(relative):
+    source = (ROOT / "backend" / relative).read_text(encoding="utf-8")
+    functions = {
+        node.name: node
+        for node in ast.parse(source).body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    return functions, source
+
+
+def _statement_tables(statement):
+    resource = statement["Resource"]
+    entries = resource if isinstance(resource, list) else [resource]
+    text = " ".join(str(entry) for entry in entries)
+    return {name for name in ("HouseholdsTable", "CommunityTable", "PhotoBucket") if name in text}
+
+
+def test_every_source_dynamodb_action_and_table_env_is_granted(template):
+    """Derive each function's DynamoDB actions from backend/*.py and check IAM.
+
+    The earlier guard stopped at get_item/query/put_item/batch_write_item, so
+    CommunityFn shipped without ``dynamodb:UpdateItem`` even though the
+    reaction, comment and report paths update META items inside
+    TransactWriteItems. This walks the real call graph (including transaction
+    members) and pins every action to the one table it applies to.
+    """
+    modules = {
+        name: _module_functions(name)
+        for name in ("store.py", "community.py", "handlers/api.py")
+    }
+
+    def actions_for(module_file, function_name, seen):
+        key = (module_file, function_name)
+        if key in seen:
+            return {}
+        seen.add(key)
+        functions, source = modules[module_file]
+        node = functions.get(function_name)
+        if node is None:
+            return {}
+        body = "\n".join(source.splitlines()[node.lineno - 1:node.end_lineno])
+        table = MODULE_TABLE.get(module_file)
+        found = {}
+
+        def add(target, action):
+            found.setdefault(target, set()).add(action)
+
+        for call in ast.walk(node):
+            if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Attribute):
+                continue
+            method = call.func.attr
+            if table and method in DYNAMO_METHOD_ACTIONS:
+                add(table, DYNAMO_METHOD_ACTIONS[method])
+            if table and method == "transact_write_items":
+                add(table, "dynamodb:TransactWriteItems")
+                for member, action in TRANSACT_MEMBER_ACTIONS.items():
+                    if re.search(r'\{"%s"\s*:' % member, body):
+                        add(table, action)
+            if method in S3_METHOD_ACTIONS:
+                add("PhotoBucket", S3_METHOD_ACTIONS[method])
+
+        for call in ast.walk(node):
+            if not isinstance(call, ast.Call):
+                continue
+            func = call.func
+            target = None
+            if isinstance(func, ast.Name):
+                target = (module_file, func.id)
+            elif isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
+                imported = BACKEND_MODULES.get(func.value.id)
+                if imported:
+                    target = (imported, func.attr)
+                elif func.attr == "__wrapped__" and func.value.id in functions:
+                    target = (module_file, func.value.id)
+            if target and target != key:
+                for dest, actions in actions_for(*target, seen).items():
+                    for action in actions:
+                        add(dest, action)
+        return found
+
+    for name, body in resources(template, "AWS::Serverless::Function").items():
+        properties = body["Properties"]
+        handler = properties["Handler"].rsplit(".", 1)[-1]
+        env = properties.get("Environment", {}).get("Variables", {})
+        statements = [s for policy in properties.get("Policies", []) for s in policy.get("Statement", [])]
+        for table_name, actions in actions_for("handlers/api.py", handler, set()).items():
+            if table_name == "PhotoBucket":
+                continue
+            covering = [s for s in statements if table_name in _statement_tables(s)]
+            allowed = {action for s in covering for action in s.get("Action", [])}
+            missing = actions - allowed
+            assert not missing, (
+                f"{name} ({handler}) needs {sorted(missing)} on {table_name} "
+                f"but its policy does not grant them"
+            )
+            assert env.get(TABLE_ENV[table_name]), (
+                f"{name} touches {table_name} but does not set {TABLE_ENV[table_name]}"
+            )
+            if table_name == "CommunityTable":
+                assert any("/index/*" in str(s["Resource"]) for s in covering), (
+                    f"{name} queries CommunityTable indexes (GSI1/GSI2) but its "
+                    f"policy omits the table/<name>/index/* ARN"
+                )

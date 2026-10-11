@@ -1,0 +1,134 @@
+/* Shared shell styling hooks.
+ *
+ * Scope is deliberately narrow: the accessible focus ring plus the Profile
+ * sheet header/row layout fix (title + close button on one row, aligned rows,
+ * Sign out always reachable). Control-level styling for Community sheets and
+ * Learn already lives in sparrow.css / community-reels.css / learn-video.css,
+ * so nothing here restyles them. */
+
+/* Universal accessible focus ring for keyboard navigation. */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: 3px solid var(--sun);
+  outline-offset: 2px;
+}
+
+/* ---------------- Profile sheet ---------------- */
+.profile-sheet-head {
+  padding-right: 0 !important;
+  width: 100%;
+}
+
+.profile-sheet-head > div {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-sheet-title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.profile-sheet-title-row h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.profile-sheet-title-row button {
+  width: 48px;
+  height: 48px;
+  min-height: 48px;
+  flex: 0 0 48px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--white);
+  color: var(--dark);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.profile-sheet-title-row button svg {
+  display: block;
+  transform: rotate(180deg);
+  transform-origin: center;
+}
+
+.settings-sheet {
+  max-width: 520px;
+  width: 100%;
+  max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+  box-sizing: border-box;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 24px 20px max(32px, calc(16px + env(safe-area-inset-bottom)));
+}
+
+.settings-sheet > button:not(.sheet-head button) {
+  width: 100%;
+  min-height: 70px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--white);
+  display: grid;
+  grid-template-columns: 24px 1fr 46px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 4px;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.settings-sheet > button:not(.sheet-head button) > svg:first-child {
+  width: 24px;
+  height: 24px;
+  justify-self: center;
+  color: var(--forest);
+}
+
+.settings-sheet > button:not(.sheet-head button) > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settings-sheet > button:not(.sheet-head button) > span strong {
+  font-size: 16px;
+  color: var(--dark);
+}
+
+.settings-sheet > button:not(.sheet-head button) > span small {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.settings-sheet > button:not(.sheet-head button) > svg:last-child {
+  justify-self: end;
+  color: var(--muted);
+}
+
+.settings-sheet > button:not(.sheet-head button) > .toggle {
+  justify-self: end;
+}
+
+.settings-sheet > button.danger > svg:first-child,
+.settings-sheet > button.danger > span strong {
+  color: var(--error);
+}
+
+.settings-sheet > button:last-of-type {
+  margin-bottom: 12px;
+}

@@ -12,8 +12,8 @@ export interface LearnClip {
   category: string;
   src: string;
   poster: string;
-  captions: string;
-  captionsLang: string;
+  captions?: string;
+  captionsLang?: string;
   durationSec: number;
 }
 

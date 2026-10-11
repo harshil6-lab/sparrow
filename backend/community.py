@@ -64,6 +64,17 @@ def _profile_name(sub):
     return profile["displayName"]
 
 
+def _comment_author(sub):
+    """Comment authors never block a valid body.
+
+    The contract defines a comment as {text} only, so a comment must not fail
+    with needs_display_name when the account has not named itself yet. Posts
+    still require a display name; comments fall back to a neutral label.
+    """
+    profile = store.ensure_profile(sub)
+    return profile.get("displayName") or "Sparrow user"
+
+
 def _head_photo(key):
     try:
         return store.s3().head_object(Bucket=os.environ["BUCKET"], Key=key)
@@ -309,7 +320,7 @@ def add_comment(sub, post_id, body):
         raise HttpError(400, "text must not be empty")
     cid, created = str(uuid.uuid4()), _now()
     item = {"pk": f"POST#{post_id}", "sk": f"COMMENT#{created}#{cid}", "commentId": cid,
-            "authorSub": sub, "authorName": _profile_name(sub), "text": value, "createdAt": created,
+            "authorSub": sub, "authorName": _comment_author(sub), "text": value, "createdAt": created,
             "gsi2pk": _author(sub), "gsi2sk": f"POST#{post_id}#COMMENT#{created}#{cid}"}
     table = store.community_table()
     table.meta.client.transact_write_items(TransactItems=[

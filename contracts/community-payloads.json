@@ -8,6 +8,7 @@
     "post": {"key": "c/user-a/photo.jpg", "caption": "Saved energy today", "tag": "energy_saving", "confirmAdult": true},
     "reaction": {"type": "grow"},
     "comment": {"text": "Nice work"},
+    "commentShort": {"text": "hi"},
     "report": {"reason": "spam"}
   },
   "invalid": [
@@ -21,6 +22,8 @@
     {"post": {"key": "c/user-a/photo.jpg", "caption": "x", "tag": "energy_saving", "confirmAdult": false}},
     {"reaction": {"type": "heart"}},
     {"comment": {"text": "   "}},
-    {"comment": {"text": "<b></b>"}}
+    {"comment": {"text": "<b></b>"}},
+    {"comment": {}},
+    {"report": {"reason": "ads"}}
   ]
 }

@@ -88,3 +88,19 @@ describe("Learn tab", () => {
     httpsLinks.forEach((link) => expect(link).toHaveAttribute("rel", "noopener noreferrer"));
   });
 });
+
+describe("Responsive App Shell layout", () => {
+  it("renders both sidebar and bottom tab bar in DOM for responsive media queries", async () => {
+    renderApp("/app");
+    const sidebar = document.querySelector(".side-nav");
+    expect(sidebar).not.toBeNull();
+    const bottomNav = document.querySelector("[data-app-tabbar]");
+    expect(bottomNav).not.toBeNull();
+
+    // Sidebar has Sparrow branding and side-profile button
+    expect(sidebar?.querySelector(".logo")).not.toBeNull();
+    const profileBtn = sidebar?.querySelector(".side-profile");
+    expect(profileBtn).not.toBeNull();
+    expect(profileBtn?.getAttribute("aria-label")).toBe("Open profile");
+  });
+});

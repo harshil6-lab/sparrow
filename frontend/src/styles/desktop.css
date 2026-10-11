@@ -1,55 +1,117 @@
 /*
- * Desktop / laptop layout (>=900px).
- * Every rule here lives inside a min-width:900px block, so viewports <=899px
- * render exactly as before. No app-column element is positioned `fixed` against
- * the viewport: the header is sticky inside the frame scroll area, the tab bar
- * is a normal flex child, and sheets are absolute within the frame.
+ * Laptop shell (>=900px). Mobile layout remains owned by sparrow.css.
  */
-
-/* ---- Step 1: Splash is always full-bleed ------------------------------- */
 @media (min-width: 900px) {
-  .splash,
-  .landing,
-  .story-player,
-  .setup-screen,
-  .ready-screen,
-  .auth-screen {
-    max-width: none;
-  }
-  .splash {
-    width: 100%;
-    overflow-x: hidden;
-  }
-}
-
-/* ---- Step 2: one centred app frame ------------------------------------- */
-@media (min-width: 900px) {
-  /* Backdrop outside the frame: soft green-cream gradient, no blank white. */
   body {
-    background: linear-gradient(160deg, var(--bg) 0%, #e6efdf 55%, var(--soft) 100%);
-    background-attachment: fixed;
+    min-width: 0;
+    overflow-x: hidden;
+    background: var(--bg);
   }
 
   .app-shell {
-    display: flex;
-    flex-direction: column;
-    width: min(480px, 100%);
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    width: 100%;
+    max-width: none;
     height: 100dvh;
-    min-height: 0;
-    margin-inline: auto;
-    position: relative;
+    min-height: 100dvh;
+    margin: 0;
+    padding-top: env(safe-area-inset-top);
     overflow: hidden;
     background: var(--bg);
   }
 
-  /* The side rail is replaced by the in-frame header + bottom tab bar. */
   .side-nav {
-    display: none;
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    height: calc(100dvh - env(safe-area-inset-top));
+    min-height: 0;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    box-sizing: border-box;
+    padding: 28px 18px 20px;
+    overflow: hidden;
   }
 
-  /* The scroll area — the only thing that scrolls. */
-  .app-main {
+  .side-nav .logo {
+    padding-inline: 8px;
+  }
+
+  .side-nav nav {
+    margin-top: 42px;
+    gap: 6px;
+  }
+
+  .side-nav nav button,
+  .side-profile {
+    width: 100%;
+    min-height: 50px;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+
+  .side-nav nav button:hover,
+  .side-profile:hover {
+    background: var(--soft);
+  }
+
+  .side-nav nav button.active {
+    border-color: var(--line);
+  }
+
+  .side-profile {
+    margin-top: auto;
+    padding: 12px 10px;
+    border-top: 1px solid var(--line);
+    border-right: 0;
+    border-left: 0;
+    border-bottom: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+  }
+
+  .side-profile__avatar {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--forest);
+    color: var(--white);
+    font-weight: 700;
+  }
+
+  .side-profile__copy {
+    min-width: 0;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .side-profile__copy strong,
+  .side-profile__copy small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .side-profile__copy small {
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .app-main {
+    min-width: 0;
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
@@ -57,74 +119,114 @@
     flex-direction: column;
   }
 
-  /* Frame header: logo + avatar, sticky inside the frame scroll area. */
-  .app-main > header {
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    height: calc(68px + env(safe-area-inset-top));
-    padding-top: env(safe-area-inset-top);
-    background: rgba(245, 248, 241, 0.96);
-  }
-  .app-main > header .mobile-logo {
-    display: block;
-  }
-  .app-main > header > div:not(.mobile-logo) {
+  .app-main > header,
+  .bottom-nav {
     display: none;
   }
 
-  /* Bottom tab bar: a normal flex child of the frame, never viewport-fixed. */
-  .bottom-nav {
-    display: grid;
-    position: static;
-    bottom: auto;
-    left: auto;
-    right: auto;
-    z-index: auto;
+  .app-main > .page {
+    width: min(720px, calc(100% - 48px));
+    max-width: 720px;
+    box-sizing: border-box;
+    padding: 32px 0 64px;
+    margin-inline: auto;
+  }
+
+  .app-main > .demo-banner {
+    width: min(720px, calc(100% - 48px));
+    margin: 0 auto;
+  }
+
+  .community-reels--page {
     width: 100%;
-    height: auto;
-    grid-template-columns: repeat(5, 1fr);
-    padding-bottom: env(safe-area-inset-bottom);
-    background: var(--white);
-    border-top: 1px solid var(--line);
-  }
-  .bottom-nav button {
-    min-height: 62px;
-    border: 0;
-    background: var(--white);
-    color: var(--muted);
-    display: flex;
-    flex-direction: column;
+    flex: 1;
     align-items: center;
-    justify-content: center;
-    gap: 3px;
-    font-size: 14px;
-  }
-  .bottom-nav button.active {
-    color: var(--forest);
-    background: #edf4e9;
   }
 
-  /* Content can never end up behind the tab bar (flex sibling, not overlay). */
-  .page {
-    padding-bottom: 34px;
+  .community-reels--stage {
+    width: min(440px, 100%);
+    height: min(92dvh, 860px);
+    min-height: 320px;
+    margin-inline: auto;
   }
 
-  /* Sheets live inside the frame (portal target) and are positioned to it. */
+  .community-reels--stage .community-reels__track {
+    scroll-snap-type: y mandatory;
+  }
+
   [data-app-frame] .overlay {
     position: absolute;
     inset: 0;
-    border-radius: var(--radius);
+    z-index: 80;
   }
-  [data-app-frame] .sheet,
-  [data-app-frame] .language-sheet,
-  [data-app-frame] .settings-sheet,
-  [data-app-frame] .share-sheet,
-  [data-app-frame] .bill-sheet,
-  [data-app-frame] .sweep-sheet,
-  [data-app-frame] .detail-sheet,
-  [data-app-frame] .nest-sheet,
-  [data-app-frame] .confirm-sheet {
-    max-height: calc(100% - 24px);
+
+  [data-app-frame] .overlay > [role="dialog"] {
+    width: min(520px, calc(100% - 40px));
+    max-width: 520px;
+    max-height: 88dvh;
+    border-radius: var(--radius);
+    overflow: auto;
+  }
+
+  .profile-sheet-title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .profile-sheet-title-row h2 {
+    margin: 5px 0 0;
+  }
+
+  .profile-sheet-title-row button {
+    width: 48px;
+    min-height: 48px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--white);
+    color: var(--dark);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+
+  .profile-sheet-title-row button svg {
+    transform: rotate(180deg);
+  }
+
+  .community-create-sheet,
+  .settings-sheet {
+    width: min(520px, calc(100% - 40px));
+    max-height: 88dvh;
+  }
+
+  .learn-video--grid .learn-video__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .learn-video--grid .learn-video__thumb,
+  .learn-video--grid .learn-video__filters button,
+  .community-create-body input,
+  .community-create-body textarea,
+  .community-name-step input,
+  .settings-sheet button {
+    border-width: 1px;
+  }
+
+  .learn-video--grid button:focus-visible,
+  .community-create-sheet button:focus-visible,
+  .community-create-sheet input:focus-visible,
+  .community-create-sheet textarea:focus-visible,
+  .settings-sheet button:focus-visible,
+  .settings-sheet input:focus-visible,
+  .settings-sheet textarea:focus-visible {
+    outline: 3px solid var(--sun);
+    outline-offset: 3px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .learn-video--grid .learn-video__list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

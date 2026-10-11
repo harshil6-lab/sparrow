@@ -68,7 +68,7 @@ export function ClipPlayerSheet({ clip, cellular, upNext, relatedId, onClose, on
             onError={() => setFailed(true)}
           >
             <source src={clip.src} type="video/mp4" />
-            {clip.captions ? <track kind="captions" src={clip.captions} srcLang={clip.captionsLang} label={t("learn.captions")} default /> : null}
+            {clip.captions ? <track kind="captions" src={clip.captions} srcLang={clip.captionsLang ?? "en"} label={t("learn.captions")} default /> : null}
           </video>
         )}
 

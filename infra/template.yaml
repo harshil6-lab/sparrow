@@ -30,11 +30,6 @@ Parameters:
     NoEcho: true
     Description: Google OAuth client secret. Leave empty to skip the Google provider.
 
-Conditions:
-  UseGoogle: !And
-    - !Not [!Equals [!Ref GoogleClientId, '']]
-    - !Not [!Equals [!Ref GoogleClientSecret, '']]
-
 Globals:
   Function:
     Runtime: python3.12
@@ -212,12 +207,19 @@ Resources:
       CodeUri: ../backend
       Handler: handlers.api.delete_me
       Environment:
-        Variables: {TABLE: !Ref HouseholdsTable}
+        Variables:
+          TABLE: !Ref HouseholdsTable
+          COMMUNITY_TABLE: !Ref CommunityTable
       Policies:
         - Statement:
             - Effect: Allow
               Action: [dynamodb:Query, dynamodb:BatchWriteItem]
               Resource: [!GetAtt HouseholdsTable.Arn]
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:DeleteItem, dynamodb:BatchWriteItem, dynamodb:TransactWriteItems]
+              Resource:
+                - !GetAtt CommunityTable.Arn
+                - !Sub '${CommunityTable.Arn}/index/*'
             - Effect: Allow
               Action: [s3:ListBucket]
               Resource: [!GetAtt PhotoBucket.Arn]
@@ -351,7 +353,7 @@ Resources:
       Policies:
         - Statement:
             - Effect: Allow
-              Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:DeleteItem, dynamodb:BatchWriteItem, dynamodb:TransactWriteItems]
+              Action: [dynamodb:GetItem, dynamodb:Query, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:DeleteItem, dynamodb:BatchWriteItem, dynamodb:TransactWriteItems]
               Resource:
                 - !GetAtt CommunityTable.Arn
                 - !Sub '${CommunityTable.Arn}/index/*'
