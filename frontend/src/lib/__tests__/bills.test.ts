@@ -3,6 +3,7 @@ import billPayloads from "../../../../contracts/bill-payloads.json";
 import {
   buildBillPayload,
   currentMonthKey,
+  isPlausibilityWarning,
   parseAmount,
   parseUnits,
   validateAmount,
@@ -39,6 +40,13 @@ describe("bill unit validation", () => {
   it("defaults the month picker to the current month", () => {
     expect(currentMonthKey(new Date(2025, 5, 15))).toBe("2025-06");
     expect(currentMonthKey(new Date(2025, 11, 1))).toBe("2025-12");
+  });
+
+  it("warns only when usage is more than three times higher or lower", () => {
+    expect(isPlausibilityWarning(100, 301)).toBe(true);
+    expect(isPlausibilityWarning(100, 33)).toBe(true);
+    expect(isPlausibilityWarning(100, 300)).toBe(false);
+    expect(isPlausibilityWarning(100, 34)).toBe(false);
   });
 
   describe("bill payload contract", () => {

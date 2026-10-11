@@ -78,10 +78,13 @@ describe("Missions tab", () => {
 });
 
 describe("Learn tab", () => {
-  it("shows the source-pending chip and no source link for the six unsourced cards", async () => {
+  it("shows cited source links for every Learn card", async () => {
     renderApp("/app/learn");
-    const chips = await screen.findAllByText("Source pending");
-    expect(chips.length).toBe(6);
-    expect(document.querySelectorAll('a[href^="http"]').length).toBe(0);
+    const links = await screen.findAllByRole("link");
+    expect(links.some((link) => link.getAttribute("href")?.includes("AU2613.pdf"))).toBe(true);
+    expect(screen.queryByText("Source pending")).not.toBeInTheDocument();
+    const httpsLinks = document.querySelectorAll('a[href^="https://"]');
+    expect(httpsLinks.length).toBe(7);
+    httpsLinks.forEach((link) => expect(link).toHaveAttribute("rel", "noopener noreferrer"));
   });
 });

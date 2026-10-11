@@ -1,7 +1,7 @@
 ﻿import type { AppLanguage } from "../../i18n/languages";
 import type { Profile, SetupAnswers, User } from "../types";
 import type { ProfileProvider } from "./profile";
-import type { AddBillInput, AddBillResult, Bill, Dashboard, DataProvider, Settings, UploadProgress } from "./data";
+import type { AddBillInput, AddBillResult, Bill, CommunityComment, CommunityDataProvider, CommunityFeed, CommunityPost, CommunityTag, Dashboard, DataProvider, Settings, UploadProgress } from "./data";
 import { DEFAULT_SETTINGS } from "./data";
 import { API_URL } from "../env";
 import { signalUnauthorized } from "./session";
@@ -23,11 +23,15 @@ import { buildPhotoAttachPayload, buildPhotoUploadPayload, uploadToPhotoTicket }
  */
 export class HttpError extends Error {
   readonly status: number;
+  readonly errorCode: string;
+  readonly requestId: string | null;
 
-  constructor(status: number, message?: string) {
+  constructor(status: number, message?: string, errorCode = "unknown_error", requestId: string | null = null) {
     super(message ?? `HTTP ${status}`);
     this.name = "HttpError";
     this.status = status;
+    this.errorCode = errorCode;
+    this.requestId = requestId;
   }
 }
 
@@ -70,8 +74,21 @@ function errorMessage(payload: unknown, res: Response): string {
       const message = (value as { message?: unknown }).message;
       if (typeof message === "string") return message;
     }
+
   }
   return `HTTP ${res.status}`;
+}
+
+function responseErrorCode(payload: unknown, res: Response): string {
+  if (payload && typeof payload === "object" && "code" in payload) {
+    const value = (payload as { code?: unknown }).code;
+    if (typeof value === "string" && value) return value;
+  }
+  return res.headers?.get("x-sparrow-error-code") ?? "unknown_error";
+}
+
+function responseHeader(res: Response, name: string): string | null {
+  return res.headers?.get(name) ?? null;
 }
 
 export class HttpProvider {
@@ -113,14 +130,19 @@ export class HttpProvider {
 
     if (res.status === 401) {
       (this.options.onUnauthorized ?? signalUnauthorized)();
-      throw new HttpError(401, "session expired");
+      throw new HttpError(401, "session expired", responseErrorCode(null, res), responseHeader(res, "apigw-requestid"));
     }
     const payload = await parseBody(res);
     if (!res.ok) {
       if (import.meta.env.DEV) {
         console.error("[sparrow] API error", { status: res.status, body: payload });
       }
-      throw new HttpError(res.status, errorMessage(payload, res));
+      throw new HttpError(
+        res.status,
+        errorMessage(payload, res),
+        responseErrorCode(payload, res),
+        responseHeader(res, "apigw-requestid") ?? responseHeader(res, "x-amzn-requestid"),
+      );
     }
     return payload as T;
   }
@@ -129,16 +151,18 @@ export class HttpProvider {
 // --- profile mapping --------------------------------------------------------
 
 interface ServerProfile {
+  displayName?: string | null;
   language?: string;
   introSeen?: boolean;
   setupDone?: boolean;
   home?: { type?: string | null; people?: string | null; city?: string | null; appliances?: string[] };
-  prefs?: { wifiOnly?: boolean; reminders?: Partial<Settings["reminders"]> };
+  prefs?: { wifiOnly?: boolean };
 }
 
 function profileFromServer(user: User, doc: ServerProfile): Profile {
   return {
     user,
+    displayName: doc.displayName ?? null,
     introSeen: Boolean(doc.introSeen),
     setupComplete: Boolean(doc.setupDone),
     language: doc.language ?? "en",
@@ -155,6 +179,7 @@ function profileFromServer(user: User, doc: ServerProfile): Profile {
 /** Only fields the backend accepts (PROFILE_FIELDS + home/prefs sub-fields). */
 function profilePatch(profile: Profile): Record<string, unknown> {
   return {
+    ...(profile.displayName ? { displayName: profile.displayName } : {}),
     language: profile.language as AppLanguage,
     introSeen: profile.introSeen,
     setupDone: profile.setupComplete,
@@ -244,9 +269,44 @@ function writeNotes(user: User, notes: string[]): void {
 
 export class HttpDataProvider implements DataProvider {
   private readonly http: HttpProvider;
+  readonly community: CommunityDataProvider;
 
   constructor(http: HttpProvider) {
     this.http = http;
+    this.community = {
+      getCommunityFeed: (limit = 20, cursor = null) => this.http.request<CommunityFeed>(`/community/feed?${limit ? `limit=${limit}` : ""}${limit && cursor ? "&" : ""}${cursor ? `cursor=${encodeURIComponent(cursor)}` : ""}`, { method: "GET" }),
+      getCommunityPost: (id) => this.http.request<CommunityPost>(`/community/posts/${encodeURIComponent(id)}`, { method: "GET" }),
+      createCommunityPost: (input) => this.createCommunityPost(input),
+      deleteCommunityPost: (id) => this.http.request<void>(`/community/posts/${encodeURIComponent(id)}`, { method: "DELETE" }),
+      setCommunityReaction: (id, type) => this.http.request<CommunityPost>(`/community/posts/${encodeURIComponent(id)}/reaction`, { method: "PUT", body: { type } }),
+      getCommunityComments: (id, cursor = null) => this.http.request<{ comments: CommunityComment[]; cursor: string | null }>(`/community/posts/${encodeURIComponent(id)}/comments${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`, { method: "GET" }),
+      addCommunityComment: (id, text) => this.http.request<CommunityComment>(`/community/posts/${encodeURIComponent(id)}/comments`, { method: "POST", body: { text } }),
+      deleteCommunityComment: (id, commentId) => this.http.request<void>(`/community/posts/${encodeURIComponent(id)}/comments/${encodeURIComponent(commentId)}`, { method: "DELETE" }),
+      reportCommunityPost: (id, reason) => this.http.request<void>(`/community/posts/${encodeURIComponent(id)}/report`, { method: "POST", body: { reason } }),
+    };
+  }
+
+  private async createCommunityPost(input: {
+    photo: Blob;
+    caption: string;
+    tag: CommunityTag;
+    confirmAdult: boolean;
+    onProgress?: UploadProgress;
+  }): Promise<CommunityPost> {
+    const ticket = await this.http.request<{ url: string; fields: Record<string, string>; key: string }>("/community/upload-ticket", {
+      method: "POST",
+      body: { contentType: input.photo.type, size: input.photo.size },
+    });
+    const upload = (candidate: typeof ticket) => uploadToPhotoTicket({ ...candidate, maxBytes: 5 * 1024 * 1024, expiresIn: 300 }, input.photo, input.onProgress);
+    try {
+      await upload(ticket);
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.endsWith(": 403")) throw error;
+      const refreshed = await this.http.request<typeof ticket>("/community/upload-ticket", { method: "POST", body: { contentType: input.photo.type, size: input.photo.size } });
+      await upload(refreshed);
+      return this.http.request<CommunityPost>("/community/posts", { method: "POST", body: { key: refreshed.key, caption: input.caption, tag: input.tag, confirmAdult: input.confirmAdult } });
+    }
+    return this.http.request<CommunityPost>("/community/posts", { method: "POST", body: { key: ticket.key, caption: input.caption, tag: input.tag, confirmAdult: input.confirmAdult } });
   }
 
   async getBills(): Promise<Bill[]> {
@@ -329,7 +389,6 @@ export class HttpDataProvider implements DataProvider {
     return {
       wifiOnly: typeof prefs.wifiOnly === "boolean" ? prefs.wifiOnly : DEFAULT_SETTINGS.wifiOnly,
       savedNotes: readNotes(user),
-      reminders: { ...DEFAULT_SETTINGS.reminders, ...(prefs.reminders ?? {}) },
     };
   }
 
@@ -337,7 +396,7 @@ export class HttpDataProvider implements DataProvider {
     writeNotes(user, settings.savedNotes);
     await this.http.request("/me", {
       method: "PUT",
-      body: { prefs: { wifiOnly: settings.wifiOnly, reminders: settings.reminders } },
+      body: { prefs: { wifiOnly: settings.wifiOnly } },
     });
   }
 

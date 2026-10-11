@@ -26,3 +26,16 @@ def test_co2_requires_factor():
 
 def test_co2_math_with_explicit_factor():
     assert impact.co2_kg(10, 0.5) == 5.0
+
+
+def test_rupees_from_own_baseline_bill():
+    assert impact.rupees_saved(30, 1500, 200) == 225.0
+
+
+def test_rupees_none_without_baseline_amount():
+    assert impact.rupees_saved(30, None, 200) is None
+
+
+def test_rupees_rejects_negative_savings():
+    with pytest.raises(ValueError):
+        impact.rupees_saved(-1, 1500, 200)

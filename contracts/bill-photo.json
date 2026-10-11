@@ -1,0 +1,23 @@
+{
+  "upload": {
+    "valid": [
+      {"contentType": "image/jpeg", "size": 1},
+      {"contentType": "image/png", "size": 5242880}
+    ],
+    "invalid": [
+      {"contentType": "image/gif", "size": 100},
+      {"contentType": "image/jpeg", "size": 0},
+      {"contentType": "image/jpeg", "size": 5242881},
+      {"contentType": "image/jpeg", "size": 1.5},
+      {"contentType": "image/jpeg", "size": 1, "extra": true}
+    ]
+  },
+  "attach": {
+    "valid": [{"key": "u/user-a/bills/2026-08/photo.jpg"}],
+    "invalid": [
+      {"key": ""},
+      {"key": "u/other/bills/2026-08/photo.jpg"},
+      {"key": "u/user-a/bills/2026-08/photo.jpg", "extra": true}
+    ]
+  }
+}

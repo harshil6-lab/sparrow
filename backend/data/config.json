@@ -1,0 +1,11 @@
+{
+  "_note": "Every null must be filled from a cited source before it is shown in the UI.",
+  "grid_emission_factor_kg_per_kwh": 0.71,
+  "grid_emission_factor_source": "CEA CO2 Baseline Database for the Indian Power Sector, Version 21.0 (Nov 2025), weighted average, FY 2024-25",
+  "grid_emission_factor_url": "https://cea.nic.in/wp-content/uploads/baseline/2025/12/User_Guide_V_21.0.pdf",
+  "tariff_slabs": null,
+  "tariff_note": "Not used. Rupees are computed from the user's own bill.",
+  "tariff_source": "TODO: Gujarat DISCOM tariff order, with year",
+  "solar_subsidy_terms": { "per_kw_inr": { "1": 30000, "2": 60000, "3_or_more": 78000 }, "note": "Central subsidy at benchmark prices; states may add top-ups. Check pmsuryaghar.gov.in." },
+  "solar_subsidy_source": "PM-Surya Ghar: Muft Bijli Yojana, Cabinet approval Feb 2024 (pmindia.gov.in); verify current terms on pmsuryaghar.gov.in"
+}

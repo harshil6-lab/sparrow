@@ -3,14 +3,11 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "../../components/Icon";
 import { SparrowMascot } from "../../components/SparrowMascot";
 import { Sheet } from "../../components/ui/Sheet";
-import type { Bill, Settings } from "../../lib/api/data";
+import type { Bill } from "../../lib/api/data";
 import { APPLIANCE_OPTIONS, HOME_OPTIONS, PEOPLE_OPTIONS } from "../../lib/setupOptions";
 import type { HomeType, Profile } from "../../lib/types";
 import { missionResult } from "../../lib/impact";
 import { VerificationResult } from "./VerificationResult";
-
-/** Weekday chips in the export's order. Labels are i18n keys. */
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 /** "My Nest": edit home type, people, city and appliances, then Save. */
 export function NestSheet({
@@ -239,85 +236,6 @@ export function BillsSheet({
           <Icon name="bill" size={18} /> {t("bills.add")}
         </button>
       </div>
-    </Sheet>
-  );
-}
-
-/** Reminders: device-local only. The line says so; nothing claims a send. */
-export function RemindersSheet({
-  open,
-  settings,
-  onSave,
-  onClose,
-}: {
-  open: boolean;
-  settings: Settings;
-  onSave: (settings: Settings) => Promise<void>;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const [enabled, setEnabled] = useState(settings.reminders.enabled);
-  const [time, setTime] = useState(settings.reminders.time);
-  const [days, setDays] = useState<string[]>(settings.reminders.days);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    setEnabled(settings.reminders.enabled);
-    setTime(settings.reminders.time);
-    setDays(settings.reminders.days);
-  }, [open, settings]);
-
-  const toggleDay = (day: string) =>
-    setDays((all) => (all.includes(day) ? all.filter((x) => x !== day) : [...all, day]));
-
-  const save = async () => {
-    setBusy(true);
-    try {
-      await onSave({ ...settings, reminders: { enabled, time, days } });
-      onClose();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      label={t("reminders.eyebrow")}
-      sheetClassName="sheet reminder-sheet"
-      closeLabel={t("common.close")}
-    >
-      <div className="eyebrow">{t("reminders.eyebrow")}</div>
-      <h2>{t("reminders.title")}</h2>
-      <button className="toggle-row" type="button" onClick={() => setEnabled(!enabled)}>
-        <span>
-          <strong>{t("reminders.missionReminders")}</strong>
-          <small>{t("reminders.savedOnDevice")}</small>
-        </span>
-        <span className={`toggle ${enabled ? "on" : ""}`}><i /></span>
-      </button>
-      <label>
-        {t("reminders.time")}
-        <input type="time" value={time} disabled={!enabled} onChange={(event) => setTime(event.target.value)} />
-      </label>
-      <div className="weekday-chips">
-        {WEEKDAYS.map((day) => (
-          <button
-            type="button"
-            disabled={!enabled}
-            className={days.includes(day) ? "selected" : ""}
-            key={day}
-            onClick={() => toggleDay(day)}
-          >
-            {t(`reminders.day.${day}`)}
-          </button>
-        ))}
-      </div>
-      <button className="primary-button wide" disabled={busy} onClick={() => void save()}>
-        {t("reminders.save")}
-      </button>
     </Sheet>
   );
 }

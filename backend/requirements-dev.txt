@@ -1,0 +1,7 @@
+# Test-only dependencies (the deployed handler code uses stdlib + boto3 only,
+# which the Lambda runtime already provides).
+pytest>=8
+moto[dynamodb]>=5
+boto3>=1.34
+# only used to read infra/template.yaml in the template guards
+PyYAML>=6

@@ -25,6 +25,7 @@ const ROUTES = [
   { id: "app-home", path: "/app", wait: ".app-shell" },
   { id: "app-missions", path: "/app/missions", wait: ".app-shell" },
   { id: "app-learn", path: "/app/learn", wait: ".app-shell" },
+  { id: "app-community", path: "/app/community", wait: ".community-page", openCommunityCreate: true },
   { id: "app-solar", path: "/app/solar", wait: ".app-shell" },
   { id: "app-me", path: "/app/me", wait: ".app-shell" },
   { id: "app-profile-sheet", path: "/app", wait: ".app-shell", openProfile: true },
@@ -77,6 +78,11 @@ async function gotoRoute(page, route) {
     await page.getByRole("button", { name: "Open profile" }).click();
     await page.waitForSelector('[role="dialog"]', { timeout: 8000 });
   }
+  if (route.openCommunityCreate) {
+    await page.evaluate(() => localStorage.setItem("sparrow.community.guidelines.u1", "1"));
+    await page.getByRole("button", { name: /\+ Post|पोस्ट/ }).click();
+    await page.waitForSelector(".community-create-sheet", { timeout: 8000 });
+  }
   // Readiness gates: stylesheets applied (guards against a transient
   // CSS-less render while the dev server re-optimizes) and fonts settled.
   await page.waitForFunction(
@@ -111,11 +117,15 @@ async function measure(page) {
     const last = scroll ? scroll.lastElementChild : null;
     return {
       innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
       docScrollWidth: document.documentElement.scrollWidth,
       frame: rect(frame),
       header: rect(document.querySelector("[data-app-header]")),
       tabbar: rect(document.querySelector("[data-app-tabbar]")),
       sheet: rect(document.querySelector('[role="dialog"]')),
+      sheetFooter: rect(document.querySelector(".community-create-footer")),
+      sheetScrollWidth: document.querySelector('[role="dialog"]')?.scrollWidth ?? 0,
+      sheetClientWidth: document.querySelector('[role="dialog"]')?.clientWidth ?? 0,
       lastContent: rect(last),
     };
   });
@@ -204,7 +214,7 @@ async function main() {
             failures.push(`${width}/${route.id}: tab bar missing`);
           }
 
-          if (m.header) {
+          if (m.header && !route.openCommunityCreate) {
             const ok = within(m.header, m.frame);
             results.push({ width, route: route.id, check: "header-in-frame", ok, info: "" });
             if (!ok) failures.push(`${width}/${route.id}: header outside frame`);
@@ -214,6 +224,12 @@ async function main() {
             const ok = !!m.sheet && within(m.sheet, m.frame, 2);
             results.push({ width, route: route.id, check: "sheet-in-frame", ok, info: "" });
             if (!ok) failures.push(`${width}/${route.id}: sheet outside frame`);
+          }
+          if (route.openCommunityCreate && m.sheet && m.sheetFooter) {
+            const ok = m.sheetFooter.bottom <= m.innerHeight + 1;
+            results.push({ width, route: route.id, check: "sheet-footer-visible", ok, info: `${m.sheetFooter.bottom.toFixed(1)}<=${m.innerHeight}` });
+            if (!ok) failures.push(`${width}/${route.id}: sheet footer below viewport`);
+            if (m.sheetScrollWidth > m.sheetClientWidth) failures.push(`${width}/${route.id}: sheet has horizontal scroll`);
           }
         }
 

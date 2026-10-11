@@ -2,7 +2,43 @@ node_modules/
 .aws-sam/
 __pycache__/
 .env
+.env.production
 
 
 #agents
 .refact
+
+samconfig.toml
+infra/samconfig.toml
+
+Premium Energy Saver App/
+*.bak
+infra/template.yaml.backup
+sparrow-dist.zip
+frontend/test-results.txt
+authorizer-backup.json
+jwt-config.json
+frontend/.qa/
+.aws-sam/
+
+Premium Energy Saver App/
+*.bak
+infra/template.yaml.backup
+sparrow-dist.zip
+frontend/test-results.txt
+authorizer-backup.json
+jwt-config.json
+frontend/.qa/
+.aws-sam/
+
+nul
+samconfig.toml
+Premium Energy Saver App/
+*.bak
+infra/template.yaml.backup
+sparrow-dist.zip
+frontend/test-results.txt
+authorizer-backup.json
+jwt-config.json
+frontend/.qa/
+.aws-sam/

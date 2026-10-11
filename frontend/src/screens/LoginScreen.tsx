@@ -57,7 +57,8 @@ export function LoginScreen() {
     err instanceof AuthError ? t(errorKey(err.code)) : t("login.errorUnknown");
 
   const go = (profile: Profile | null) => {
-    navigate(nextRoute(profile), { replace: true });
+    const destination = location.state?.from;
+    navigate(destination && destination.startsWith("/app/") ? destination : nextRoute(profile), { replace: true });
   };
 
   if (USE_MOCK) {

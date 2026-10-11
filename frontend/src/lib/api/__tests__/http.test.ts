@@ -2,6 +2,7 @@
 import { HttpDataProvider, HttpError, HttpProfileProvider, HttpProvider, NetworkError } from "../http";
 import { nextRoute, type Profile } from "../../types";
 import type { User } from "../../types";
+import communityContract from "../../../../../contracts/community-payloads.json";
 
 const user: User = { id: "sub-1", email: "a@b.com", displayName: "Ananya", provider: "email" };
 
@@ -30,6 +31,19 @@ afterEach(() => {
 });
 
 describe("http provider (authenticated API)", () => {
+  it("builds feed URLs from the shared API contract examples", async () => {
+    const { fetchMock, http } = provider();
+    fetchMock.mockResolvedValue(res(200, { posts: [], cursor: null }));
+    const data = new HttpDataProvider(http);
+    for (const example of communityContract.valid.feedQueries) {
+      await data.community.getCommunityFeed(Number(example.query.limit));
+    }
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "https://api.test/community/feed?limit=20",
+      "https://api.test/community/feed?limit=1",
+    ]);
+  });
+
   it("sends the ID token with authentication and only known fields", async () => {
     const { fetchMock, http } = provider();
     fetchMock.mockResolvedValue(
@@ -139,7 +153,7 @@ describe("http profile provider", () => {
         introSeen: false,
         setupDone: false,
         home: { type: null, people: null, city: null, appliances: [] },
-        prefs: { wifiOnly: false, reminders: { enabled: false, time: "20:00", days: [] } },
+        prefs: { wifiOnly: false },
       }),
     );
     const profile = (await new HttpProfileProvider(http).load(user)) as Profile;
@@ -178,17 +192,16 @@ describe("http profile provider", () => {
   it("reads prefs from GET /me and PUTs only prefs on save", async () => {
     const { fetchMock, http } = provider();
     fetchMock.mockResolvedValueOnce(
-      res(200, { prefs: { wifiOnly: true, reminders: { enabled: true, time: "19:00", days: ["Mon"] } } }),
+      res(200, { prefs: { wifiOnly: true } }),
     );
     const data = new HttpDataProvider(http);
     const settings = await data.getSettings(user);
     expect(settings.wifiOnly).toBe(true);
-    expect(settings.reminders.days).toEqual(["Mon"]);
 
     fetchMock.mockResolvedValueOnce(res(200, {}));
     await data.saveSettings(user, { ...settings, savedNotes: ["ac_setpoint"] });
     const body = JSON.parse(String((fetchMock.mock.calls[1][1] as RequestInit).body));
     expect(Object.keys(body)).toEqual(["prefs"]);
-    expect(body.prefs).toEqual({ wifiOnly: true, reminders: settings.reminders });
+    expect(body.prefs).toEqual({ wifiOnly: true });
   });
 });

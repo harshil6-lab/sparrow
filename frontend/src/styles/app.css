@@ -103,7 +103,6 @@
 .sweep-sheet,
 .detail-sheet,
 .nest-sheet,
-.reminder-sheet,
 .confirm-sheet {
   border-radius: var(--radius);
 }
@@ -174,4 +173,42 @@
 .bills-list,
 .source-sheet {
   border-radius: var(--radius);
+}
+
+.bill-photo-thumb {
+  display: block;
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  margin: 8px 0;
+}
+
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.photo-actions .quiet-button,
+.photo-actions .primary-button {
+  min-height: 48px;
+}
+
+.plausibility-warning {
+  margin: 16px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--soft);
+}
+
+.plausibility-warning p { margin: 0 0 10px; }
+
+.settings-sheet .sheet-head small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 14px;
 }

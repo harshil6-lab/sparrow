@@ -19,7 +19,6 @@ describe("account flows", () => {
     await api.data.saveSettings(user, {
       wifiOnly: false,
       savedNotes: ["ac_setpoint"],
-      reminders: { enabled: false, time: "20:00", days: ["Mon"] },
     });
 
     await api.auth.signOut();

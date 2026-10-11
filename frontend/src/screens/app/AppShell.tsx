@@ -16,12 +16,13 @@ import { HomeTab } from "./HomeTab";
 import { MissionsTab } from "./MissionsTab";
 import { LearnTab } from "./LearnTab";
 import { MeTab, verifiedTotals } from "./MeTab";
+import { CommunityTab } from "./CommunityTab";
 import { SweepSheet } from "./SweepSheet";
 import { BillSheet } from "./BillSheet";
 import { ResultSheet } from "./ResultSheet";
 import { ShareSheet } from "./ShareSheet";
 import { ClipSheet, LearnDetailSheet, MissionDetailSheet } from "./DetailSheets";
-import { BillsSheet, ConfirmSheet, NestSheet, RemindersSheet } from "./ProfileSheets";
+import { BillsSheet, ConfirmSheet, NestSheet } from "./ProfileSheets";
 import { TabError, TabLoading } from "./TabState";
 import { TAB_PATHS, navItems, tabFromPath, type TabId } from "./tabs";
 import { clearDemo } from "../../lib/demo";
@@ -37,7 +38,6 @@ type Overlay =
   | "clip"
   | "nest"
   | "bills"
-  | "reminders"
   | "delete"
   | "reset"
   | "signout"
@@ -246,6 +246,13 @@ export function AppShell() {
         />
       );
     }
+    if (tab === "community") {
+      return <CommunityTab demo={demo} onSignUp={() => {
+        clearDemo();
+        resetApi();
+        navigate("/login", { replace: true, state: { mode: "signup" } });
+      }} />;
+    }
     if (tab === "me") {
       return (
         <MeTab
@@ -359,7 +366,6 @@ export function AppShell() {
           onToggleWifi={toggleWifi}
           onNest={() => openFromProfile("nest")}
           onBills={() => openFromProfile("bills")}
-          onReminders={() => openFromProfile("reminders")}
           onStory={() => {
             setProfileOpen(false);
             navigate("/app/story");
@@ -393,7 +399,13 @@ export function AppShell() {
           onClose={() => setOverlay(null)}
         />
 
-        <ClipSheet open={overlay === "clip"} card={card} clipUrl={LEARN_CLIP_URL} onClose={() => setOverlay(null)} />
+        <ClipSheet
+          open={overlay === "clip"}
+          card={card}
+          clipUrl={LEARN_CLIP_URL}
+          wifiOnly={settings.wifiOnly}
+          onClose={() => setOverlay(null)}
+        />
 
         <NestSheet
           open={overlay === "nest"}
@@ -410,13 +422,6 @@ export function AppShell() {
           onRetry={() => void refresh()}
           onAdd={() => setOverlay("bill")}
           onShare={openShare}
-          onClose={() => setOverlay(null)}
-        />
-
-        <RemindersSheet
-          open={overlay === "reminders"}
-          settings={settings}
-          onSave={async (next) => saveSettings(next)}
           onClose={() => setOverlay(null)}
         />
 
@@ -450,6 +455,7 @@ export function AppShell() {
           onClose={() => setOverlay(null)}
           demo={demo}
           wifiOnly={settings.wifiOnly}
+          bills={bills}
           onSaved={refresh}
           onShare={openShare}
         />

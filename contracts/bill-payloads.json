@@ -1,0 +1,37 @@
+{
+  "valid": [
+    {
+      "month": "2026-08",
+      "units": 186
+    },
+    {
+      "month": "2026-09",
+      "units": 170,
+      "amount": 1500
+    }
+  ],
+  "invalid": [
+    {
+      "month": "2026-8",
+      "units": 186
+    },
+    {
+      "month": "2026-08",
+      "units": 186.5
+    },
+    {
+      "month": "2026-08",
+      "units": 0
+    },
+    {
+      "month": "2026-08",
+      "units": 186,
+      "amount": null
+    },
+    {
+      "month": "2026-08",
+      "units": 186,
+      "photo": "not accepted"
+    }
+  ]
+}

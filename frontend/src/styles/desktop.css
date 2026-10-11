@@ -124,7 +124,6 @@
   [data-app-frame] .sweep-sheet,
   [data-app-frame] .detail-sheet,
   [data-app-frame] .nest-sheet,
-  [data-app-frame] .reminder-sheet,
   [data-app-frame] .confirm-sheet {
     max-height: calc(100% - 24px);
   }
