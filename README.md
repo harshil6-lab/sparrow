@@ -50,7 +50,7 @@ A friendly sparrow guides the user. The **nest** on the dashboard grows when the
 |:---:|:---:|:---:|
 | from bill-to-bill comparison | from a cited grid emission factor | from the cited tariff slabs |
 
-### 🌿 Why it matters
+#### 🌿 Why it matters
 
 | 🌏 Planet | 🏠 Home | 🐦 Neighbourhood |
 |---|---|---|
