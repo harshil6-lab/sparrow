@@ -30,7 +30,7 @@
 
 </div>
 
-<img src="assets/abcde.svg" alt="Sparrow - The Indian Energy Saver" width="100%"/>
+<img src="assets/abcde.png" alt="Sparrow - The Indian Energy Saver" width="100%"/>
 <img src="assets/divider1.svg" alt="" width="100%"/>
 
 ## 🌱 What is Sparrow?
