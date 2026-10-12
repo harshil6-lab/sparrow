@@ -1,46 +1,34 @@
 [
     {
         "id":  "learn-01-ac",
-        "factId":  "ac_setpoint",
-        "title":  "AC with a fan",
-        "category":  "Cooling",
+        "title":  "Energy Awareness Antham",
+        "category":  "Learn",
         "src":  "/learn/learn-01-ac.mp4",
-        "poster":  "/learn/learn-01-ac.jpg",
-        "captions":  "/learn/learn-01-ac.vtt",
-        "captionsLang":  "en",
-        "durationSec":  30
+        "poster":  "/learn/learn-01-ac.png",
+        "durationSec":  60
     },
     {
-        "id":  "learn-02-standby",
-        "factId":  "standby_power",
-        "title":  "The standby sweep",
-        "category":  "Standby",
+        "id":  "This is how we're wasting energy!",
+        "title":  "learn-02-standby",
+        "category":  "Learn",
         "src":  "/learn/learn-02-standby.mp4",
-        "poster":  "/learn/learn-02-standby.jpg",
-        "captions":  "/learn/learn-02-standby.vtt",
-        "captionsLang":  "en",
-        "durationSec":  30
+        "poster":  "/learn/learn-02-standby.png",
+        "durationSec":  176
     },
     {
-        "id":  "learn-03-led",
-        "factId":  "led_swap",
-        "title":  "Swap to LED",
-        "category":  "Lighting",
+        "id":  "energy saving tips",
+        "title":  "learn-03-led",
+        "category":  "Learn",
         "src":  "/learn/learn-03-led.mp4",
-        "poster":  "/learn/learn-03-led.jpg",
-        "captions":  "/learn/learn-03-led.vtt",
-        "captionsLang":  "en",
-        "durationSec":  30
+        "poster":  "/learn/learn-03-led.png",
+        "durationSec":  142
     },
     {
-        "id":  "learn-04-fridge",
-        "factId":  "fridge_door",
-        "title":  "The fridge door",
-        "category":  "Kitchen",
+        "id":  "what affects my energy bills ?",
+        "title":  "learn-04-fridge",
+        "category":  "Learn",
         "src":  "/learn/learn-04-fridge.mp4",
-        "poster":  "/learn/learn-04-fridge.jpg",
-        "captions":  "/learn/learn-04-fridge.vtt",
-        "captionsLang":  "en",
-        "durationSec":  30
+        "poster":  "/learn/learn-04-fridge.png",
+        "durationSec":  97
     }
 ]
